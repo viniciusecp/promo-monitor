@@ -50,13 +50,87 @@ cd web
 pnpm install
 pnpm dev
 ```
-O painel consome a API em `http://localhost:3333` (o backend libera CORS apenas para `http://localhost:3000`).
+O painel consome a API em `http://localhost:3333` (o backend libera CORS para qualquer origem).
 
-**Docker** (backend):
+**Docker** (backend + frontend, em uma única stack): suba tudo com `docker compose up --build` na raiz — veja o passo a passo em [Deploy em produção (Docker)](#deploy-em-produção-docker).
+
+## Deploy em produção (Docker)
+
+A raiz do projeto tem um `docker-compose.yml` que sobe a aplicação inteira em dois serviços:
+
+| Serviço | Container | Imagem | Porta no host |
+|---------|-----------|--------|---------------|
+| `backend` | `promo-monitor-backend` | FastAPI/Telethon (uvicorn) | `API_PORT` (3333) |
+| `web` | `promo-monitor-web` | SPA buildada servida por nginx | `WEB_PORT` (8080) |
+
+O navegador acessa o painel em `web` e chama a API do `backend` diretamente — por isso a URL
+pública do backend é embutida no build do frontend (`VITE_API_URL`).
+
+### 1. Pré-requisitos no servidor
+- **Docker** e **Docker Compose** instalados.
+- Credenciais da API do Telegram (`my.telegram.org/apps`) e um bot do `@BotFather`.
+- As portas `API_PORT` e `WEB_PORT` liberadas no firewall (ou atrás do seu proxy — veja TLS).
+
+### 2. Clonar e configurar variáveis
 ```bash
-cd server && docker compose up --build
+git clone <repo> promo-monitor && cd promo-monitor
+
+# Variáveis de orquestração (portas + URL pública do backend embutida no build)
+cp .env.example .env
+
+# Segredos do backend (Telegram, bot, OpenRouter)
+cp server/.env.example server/.env
 ```
-Para o login na primeira execução: `docker attach telegram-promobot` e digite o código.
+Edite o **`.env` da raiz**:
+```ini
+# URL pública pela qual o NAVEGADOR alcança o backend (vai embutida no build do frontend!)
+VITE_API_URL=https://api.seudominio.com      # ou http://SEU_IP_PUBLICO:3333
+API_PORT=3333
+WEB_PORT=8080                                 # use 80 para servir o painel direto na porta web padrão
+```
+Edite o **`server/.env`** com `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_PHONE`,
+`TELEGRAM_BOT_TOKEN` e (opcional) `OPENROUTER_API_KEY`.
+
+> ⚠️ **`VITE_API_URL` é resolvido em tempo de build**, não em runtime. Se você mudar o
+> domínio/IP público do backend depois, é preciso **rebuildar a imagem `web`**
+> (`docker compose build web` ou `docker compose up --build -d`).
+
+### 3. Subir a stack
+```bash
+docker compose up --build -d
+```
+
+### 4. Login do Telegram (apenas na 1ª vez)
+O backend bloqueia pedindo o código de verificação. Anexe ao container, digite o código e
+**solte o terminal sem matar o container** com `Ctrl-P` `Ctrl-Q`:
+```bash
+docker attach promo-monitor-backend
+```
+A sessão fica salva no volume (`server/session/`); as próximas subidas não pedem código.
+Depois, mande **`/start`** para o seu bot no Telegram para registrar o chat dos alertas.
+
+### 5. Acessar e operar
+- Painel: `http://SEU_SERVIDOR:${WEB_PORT}` · API: `http://SEU_SERVIDOR:${API_PORT}`
+```bash
+docker compose ps                 # status (o backend deve ficar "healthy")
+docker compose logs -f backend    # acompanhar logs
+docker compose down               # parar a stack (mantém os volumes)
+docker compose up --build -d      # aplicar atualizações de código
+```
+
+### Persistência
+Os dados ficam em **bind mounts** no host e sobrevivem a `down`/rebuild:
+- `server/data/` — banco SQLite (`promobot.db`).
+- `server/session/` — sessões do Telethon (usuário + bot).
+
+### TLS / HTTPS
+Os containers servem **HTTP puro**. Em produção, coloque-os atrás de um proxy com TLS
+(Cloudflare, ou um nginx/Traefik/Caddy no host) terminando HTTPS e encaminhando para
+`WEB_PORT` (painel) e `API_PORT` (API). Lembre que `VITE_API_URL` deve apontar para a URL
+**pública final** do backend (ex.: `https://api.seudominio.com`).
+
+> ℹ️ O backend roda como **um único processo uvicorn** de propósito: o worker do Telegram
+> compartilha o event loop do FastAPI, então rodar múltiplos workers duplicaria o listener.
 
 ## Documentação
 

@@ -18,7 +18,7 @@ cp .env.example .env      # set TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_PHO
 pip install -r requirements.txt
 python3 run.py            # uvicorn with reload, reads API_HOST/API_PORT from .env
 ```
-- **First run blocks on `input()`** for a Telegram verification code (interactive login in `app/telegram/auth.py`). Under Docker: `docker attach telegram-promobot`.
+- **First run blocks on `input()`** for a Telegram verification code (interactive login in `app/telegram/auth.py`). Under Docker: `docker attach promo-monitor-backend`.
 - No test runner, linter, or typechecker is configured for the backend. `requirements.txt` has version ranges, no lockfile.
 
 ### Frontend (`web/`, runs on port 3000)
@@ -31,10 +31,18 @@ pnpm lint         # eslint
 ```
 `pnpm` is the package manager (`pnpm-lock.yaml` is committed).
 
-### Docker
+### Docker (both services)
+The root `docker-compose.yml` builds and runs both services: `promo-monitor-backend`
+(uvicorn on `API_PORT`) and `promo-monitor-web` (nginx serving the built SPA on `WEB_PORT`).
 ```bash
-cd server && docker compose up --build
+cp .env.example .env                 # VITE_API_URL (build-time), API_PORT, WEB_PORT
+cp server/.env.example server/.env   # TELEGRAM_API_ID/HASH/PHONE etc.
+docker compose up --build -d
+docker attach promo-monitor-backend  # first run only: type the Telegram code, then Ctrl-P Ctrl-Q
 ```
+- `VITE_API_URL` is baked into the frontend **at build time** — rebuild the `web` image to change it.
+- Telegram session and the SQLite db persist via bind mounts (`server/session/`, `server/data/`).
+- The backend Dockerfile reads the listen port from `API_PORT`; keep it a single uvicorn process (the Telegram worker shares the event loop — multiple workers would duplicate the listener).
 
 ## Architecture
 
@@ -58,4 +66,4 @@ Strict layered architecture — respect these boundaries when adding features:
 ### Frontend
 - **React 19 + Vite + TypeScript**, **TanStack Router** (file-based routing — `routeTree.gen.ts` is auto-generated, do not edit by hand), **TanStack Query** for server state (hooks in `src/hooks/`).
 - **Tailwind CSS v4** via `@tailwindcss/vite`, **shadcn/ui** components in `src/components/ui/`. Path alias `@/` → `src/`.
-- API client in `src/lib/api.ts`; types in `src/types/`. CORS on the backend only allows `http://localhost:3000`.
+- API client in `src/lib/api.ts` (base URL from `VITE_API_URL`, falls back to `http://localhost:3333`); types in `src/types/`. CORS on the backend is open to all origins (`allow_origins=["*"]`).

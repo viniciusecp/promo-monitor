@@ -41,6 +41,15 @@ export function useUpdateInterest(id: number) {
   })
 }
 
+export function useToggleInterest() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ativo }: { id: number; ativo: boolean }) =>
+      api.put<InterestResponse>(`/interests/${id}`, { ativo }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['interests'] }),
+  })
+}
+
 export function useDeleteInterest() {
   const qc = useQueryClient()
   return useMutation({

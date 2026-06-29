@@ -55,7 +55,7 @@ function MatchesList() {
               <Label htmlFor="alerted" className="text-xs text-zinc-400">
                 Alertado
               </Label>
-              <Select value={alerted} onValueChange={setAlerted}>
+              <Select value={alerted} onValueChange={(v) => setAlerted(v ?? '')}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>

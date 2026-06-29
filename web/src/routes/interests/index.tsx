@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { InterestTable } from '@/components/features/InterestTable'
 import { DeleteDialog } from '@/components/features/DeleteDialog'
-import { useInterests, useUpdateInterest, useDeleteInterest } from '@/hooks/useInterests'
+import { useInterests, useToggleInterest, useDeleteInterest } from '@/hooks/useInterests'
 import type { InterestResponse } from '@/types'
 
 export const Route = createFileRoute('/interests/')({
@@ -15,12 +15,12 @@ export const Route = createFileRoute('/interests/')({
 function InterestsList() {
   const [deleteTarget, setDeleteTarget] = useState<InterestResponse | null>(null)
   const { data: interests, isLoading } = useInterests()
-  const updateMutation = useUpdateInterest(0)
+  const toggleMutation = useToggleInterest()
   const deleteMutation = useDeleteInterest()
 
   function handleToggle(id: number, ativo: boolean) {
-    updateMutation.mutate(
-      { ativo },
+    toggleMutation.mutate(
+      { id, ativo },
       {
         onSuccess: () => toast.success('Status atualizado'),
         onError: () => toast.error('Erro ao atualizar status'),

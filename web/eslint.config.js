@@ -19,4 +19,14 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // TanStack Router file-based routes define a local component next to the
+    // required `export const Route`, and shadcn/ui components export their `cva`
+    // variants alongside the component — both are valid patterns that the
+    // dev-only Fast Refresh rule cannot express.
+    files: ['src/routes/**/*.tsx', 'src/components/ui/**/*.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

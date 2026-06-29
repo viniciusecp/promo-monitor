@@ -14,7 +14,7 @@ function NewInterest() {
 
   function handleSubmit(data: Parameters<typeof createMutation.mutate>[0]) {
     createMutation.mutate(data, {
-      onSuccess: (result) => {
+      onSuccess: () => {
         toast.success('Interesse criado com sucesso')
         navigate({ to: '/interests' })
       },
