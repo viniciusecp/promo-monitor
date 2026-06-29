@@ -1,0 +1,6 @@
+export type { InterestResponse, InterestCreate, InterestUpdate } from './interest'
+export type { MatchDetailResponse, MatchFilters } from './match'
+export type { MessageResponse, MessageFilters } from './message'
+export type { HealthResponse } from './health'
+export type { SettingsResponse, SettingsUpdate } from './settings'
+export type { TelegramChat } from './telegram'

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy.orm import Session
 
 from app.models.promotion_match import PromotionMatch
@@ -7,6 +9,13 @@ from app.repositories.base import BaseRepository
 class MatchRepository(BaseRepository[PromotionMatch]):
     def __init__(self, db: Session) -> None:
         super().__init__(db, PromotionMatch)
+
+    def mark_alerted(self, match_id: int) -> None:
+        self.update(
+            match_id,
+            alerted=True,
+            alerted_at=datetime.now(timezone.utc),
+        )
 
     def exists_by_message_and_interest(self, message_id: int, interest_id: int) -> bool:
         from sqlalchemy import select

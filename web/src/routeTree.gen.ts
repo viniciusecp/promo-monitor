@@ -9,38 +9,127 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MessagesIndexRouteImport } from './routes/messages/index'
+import { Route as MatchesIndexRouteImport } from './routes/matches/index'
+import { Route as InterestsIndexRouteImport } from './routes/interests/index'
+import { Route as InterestsNewRouteImport } from './routes/interests/new'
+import { Route as InterestsInterestIdEditRouteImport } from './routes/interests/$interestId.edit'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MessagesIndexRoute = MessagesIndexRouteImport.update({
+  id: '/messages/',
+  path: '/messages/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MatchesIndexRoute = MatchesIndexRouteImport.update({
+  id: '/matches/',
+  path: '/matches/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InterestsIndexRoute = InterestsIndexRouteImport.update({
+  id: '/interests/',
+  path: '/interests/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InterestsNewRoute = InterestsNewRouteImport.update({
+  id: '/interests/new',
+  path: '/interests/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InterestsInterestIdEditRoute = InterestsInterestIdEditRouteImport.update({
+  id: '/interests/$interestId/edit',
+  path: '/interests/$interestId/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
+  '/interests/new': typeof InterestsNewRoute
+  '/interests/': typeof InterestsIndexRoute
+  '/matches/': typeof MatchesIndexRoute
+  '/messages/': typeof MessagesIndexRoute
+  '/interests/$interestId/edit': typeof InterestsInterestIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
+  '/interests/new': typeof InterestsNewRoute
+  '/interests': typeof InterestsIndexRoute
+  '/matches': typeof MatchesIndexRoute
+  '/messages': typeof MessagesIndexRoute
+  '/interests/$interestId/edit': typeof InterestsInterestIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
+  '/interests/new': typeof InterestsNewRoute
+  '/interests/': typeof InterestsIndexRoute
+  '/matches/': typeof MatchesIndexRoute
+  '/messages/': typeof MessagesIndexRoute
+  '/interests/$interestId/edit': typeof InterestsInterestIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/settings'
+    | '/interests/new'
+    | '/interests/'
+    | '/matches/'
+    | '/messages/'
+    | '/interests/$interestId/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/settings'
+    | '/interests/new'
+    | '/interests'
+    | '/matches'
+    | '/messages'
+    | '/interests/$interestId/edit'
+  id:
+    | '__root__'
+    | '/'
+    | '/settings'
+    | '/interests/new'
+    | '/interests/'
+    | '/matches/'
+    | '/messages/'
+    | '/interests/$interestId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SettingsRoute: typeof SettingsRoute
+  InterestsNewRoute: typeof InterestsNewRoute
+  InterestsIndexRoute: typeof InterestsIndexRoute
+  MatchesIndexRoute: typeof MatchesIndexRoute
+  MessagesIndexRoute: typeof MessagesIndexRoute
+  InterestsInterestIdEditRoute: typeof InterestsInterestIdEditRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +137,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/messages/': {
+      id: '/messages/'
+      path: '/messages'
+      fullPath: '/messages/'
+      preLoaderRoute: typeof MessagesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/matches/': {
+      id: '/matches/'
+      path: '/matches'
+      fullPath: '/matches/'
+      preLoaderRoute: typeof MatchesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/interests/': {
+      id: '/interests/'
+      path: '/interests'
+      fullPath: '/interests/'
+      preLoaderRoute: typeof InterestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/interests/new': {
+      id: '/interests/new'
+      path: '/interests/new'
+      fullPath: '/interests/new'
+      preLoaderRoute: typeof InterestsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/interests/$interestId/edit': {
+      id: '/interests/$interestId/edit'
+      path: '/interests/$interestId/edit'
+      fullPath: '/interests/$interestId/edit'
+      preLoaderRoute: typeof InterestsInterestIdEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SettingsRoute: SettingsRoute,
+  InterestsNewRoute: InterestsNewRoute,
+  InterestsIndexRoute: InterestsIndexRoute,
+  MatchesIndexRoute: MatchesIndexRoute,
+  MessagesIndexRoute: MessagesIndexRoute,
+  InterestsInterestIdEditRoute: InterestsInterestIdEditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

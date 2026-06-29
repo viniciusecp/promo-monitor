@@ -8,7 +8,7 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.logging import logger, setup_logging
 from app.database.base import Base
-from app.database.session import engine
+from app.database.session import engine, ensure_columns
 from app.workers.telegram_worker import run_telegram_worker
 
 
@@ -16,6 +16,7 @@ from app.workers.telegram_worker import run_telegram_worker
 async def lifespan(app: FastAPI):
     setup_logging()
     Base.metadata.create_all(bind=engine)
+    ensure_columns()
     logger.info("database_ready")
 
     task = asyncio.create_task(run_telegram_worker())
@@ -45,3 +46,13 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host=settings.api_host,
+        port=settings.api_port,
+        reload=True,
+    )

@@ -16,3 +16,13 @@ class MessageRepository(BaseRepository[TelegramMessage]):
             TelegramMessage.chat_id == chat_id,
         )
         return self.db.scalar(query) is not None
+
+    def list_recent(self, limit: int = 500) -> list[TelegramMessage]:
+        from sqlalchemy import select
+
+        query = (
+            select(TelegramMessage)
+            .order_by(TelegramMessage.id.desc())
+            .limit(limit)
+        )
+        return list(self.db.scalars(query).all())

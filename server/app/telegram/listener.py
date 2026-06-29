@@ -13,11 +13,21 @@ class MessageListener:
         self.message_service = message_service
 
     async def start(self) -> None:
-        self.client.add_event_handler(self._on_new_message, NewMessage)
+        # Só processa grupos/canais e mensagens recebidas. Ignora DMs (inclusive
+        # a DM que o bot envia ao próprio usuário) e mensagens enviadas pela
+        # própria conta — isso evita o loop de feedback em que um alerta vira
+        # uma nova mensagem que casa com um interesse e dispara outro alerta.
+        self.client.add_event_handler(
+            self._on_new_message,
+            NewMessage(incoming=True, func=lambda e: e.is_group or e.is_channel),
+        )
         logger.info("listener_started")
 
     async def _on_new_message(self, event: NewMessage.Event) -> None:
         try:
+            if event.is_private:
+                return
+
             msg = event.message
             chat = await event.get_chat()
             sender = await event.get_sender()

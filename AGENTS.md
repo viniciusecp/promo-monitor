@@ -10,6 +10,7 @@
 - **Repository pattern** (`BaseRepository[T]` in `app/repositories/base.py`)
 - **Portuguese naming** in models/schemas/routes (`nome_produto`, `preco_maximo`, `palavras_chave`, `palavras_excluidas`, `ativo`)
 - **Composite matching**: KeywordMatchStrategy + FuzzyMatchStrategy (rapidfuzz `partial_ratio`), score = max of both, threshold 0.6. Price extraction via regex (`R$ 1.234,56` etc.)
+- **LLM validation** (optional, `app/services/llm_validator_service.py`): matcher candidates are re-checked by an LLM (LangChain + OpenRouter, `LLM_MODEL`) before a match/alert is created. Gated by `OPENROUTER_API_KEY`; fail-open (approves on no-key/disabled/error). Rejections are logged as `llm_rejected`, not stored.
 - **structlog** for structured logging, **pydantic-settings** for config
 
 ### Frontend
@@ -31,7 +32,7 @@ server/
     models/         # SQLAlchemy ORM (TelegramMessage, ProductInterest, PromotionMatch)
     repositories/   # data access layer
     schemas/        # Pydantic request/response
-    services/       # business logic (interest, matcher, alert, message)
+    services/       # business logic (interest, matcher, llm_validator, alert, message)
     telegram/       # Telethon client, auth (interactive code prompt), listener
     workers/        # background worker entrypoint
 web/
@@ -50,7 +51,7 @@ cd server
 python3 -m venv .venv && source .venv/bin/activate
 cp .env.example .env      # fill in TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_PHONE
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 3333
+python3 run.py            # lê API_HOST e API_PORT do .env
 ```
 
 First run **requires** a Telegram verification code via console `input()`.

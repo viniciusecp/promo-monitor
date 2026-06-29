@@ -23,10 +23,20 @@ class Settings(BaseSettings):
     telegram_api_hash: str
     telegram_phone: str
     telegram_session_file: str = str(SESSION_DIR / "telegram.session")
+    telegram_bot_token: str | None = None
+    telegram_bot_session_file: str = str(SESSION_DIR / "bot.session")
 
     database_url: str = f"sqlite:///{DATA_DIR / 'promobot.db'}"
 
     match_score_threshold: float = 0.6
+
+    # Validação dos candidatos do matcher por LLM (via LangChain + OpenRouter).
+    # Sem openrouter_api_key, a validação fica desativada (comportamento atual).
+    openrouter_api_key: str | None = None
+    llm_validation_enabled: bool = True
+    llm_base_url: str = "https://openrouter.ai/api/v1"
+    llm_model: str = "openai/gpt-4o-mini"
+    llm_timeout: float = 20.0
 
     api_host: str = "0.0.0.0"
     api_port: int = 8000

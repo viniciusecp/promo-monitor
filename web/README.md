@@ -1,73 +1,63 @@
-# React + TypeScript + Vite
+# Promo Monitor — Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Painel de gerenciamento do [Promo Monitor](../README.md). Consome a API REST do [`server/`](../server/README.md) para cadastrar interesses de produto, acompanhar os matches encontrados, navegar pelas mensagens capturadas e configurar o destino dos alertas.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 19** + **TypeScript** + **Vite**
+- **TanStack Router** — roteamento file-based (`src/routes/`); `routeTree.gen.ts` é gerado automaticamente, **não edite à mão**
+- **TanStack Query** — estado de servidor (hooks em `src/hooks/`)
+- **Tailwind CSS v4** via `@tailwindcss/vite`
+- **shadcn/ui** — componentes em `src/components/ui/`
+- **sonner** — toasts; **lucide-react** — ícones
+- Alias de path `@/` → `src/`
 
-## React Compiler
+## Pré-requisitos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node + [pnpm](https://pnpm.io) (o `pnpm-lock.yaml` é commitado)
+- O backend rodando em `http://localhost:3333` (a base da API está fixada em `src/lib/api.ts`). O backend libera CORS apenas para `http://localhost:3000`.
 
-## Expanding the ESLint configuration
+## Comandos
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm install
+pnpm dev       # servidor de desenvolvimento do Vite (porta 3000)
+pnpm build     # tsc -b && vite build
+pnpm preview   # serve o build de produção
+pnpm lint      # eslint
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Estrutura
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+src/
+├── routes/              # Rotas file-based (TanStack Router)
+│   ├── index.tsx        #   Dashboard
+│   ├── interests/       #   Listar / criar / editar interesses
+│   ├── matches/         #   Matches encontrados
+│   ├── messages/        #   Mensagens capturadas
+│   └── settings.tsx     #   Destino dos alertas + guia de setup do bot
+├── components/
+│   ├── features/        # Componentes de domínio (InterestForm, MatchTable, ...)
+│   ├── layout/          # Header, Sidebar
+│   └── ui/              # Componentes shadcn/ui
+├── hooks/               # Hooks TanStack Query (useInterests, useMatches, ...)
+├── lib/                 # api.ts (client REST), utils.ts (cn helper)
+├── types/               # Tipos das entidades (interest, match, message, settings, ...)
+└── routeTree.gen.ts     # Gerado pelo TanStack Router (não editar)
+```
+
+## Páginas
+
+| Rota | Descrição |
+|------|-----------|
+| `/` | Dashboard com visão geral |
+| `/interests` | CRUD de interesses (produto, preço máximo, palavras-chave, exclusões) |
+| `/matches` | Promoções que bateram com seus interesses |
+| `/messages` | Mensagens brutas capturadas dos grupos |
+| `/settings` | Define o `alert_target` (destino dos alertas) e mostra o guia de configuração do bot |
+
+## Notas
+
+- A URL da API fica em `src/lib/api.ts` (`BASE_URL`). Ajuste ali se o backend rodar em outro host/porta.
+- ESLint configurado com os plugins de React Hooks e React Refresh. Não há test runner configurado.

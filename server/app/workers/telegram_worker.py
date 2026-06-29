@@ -7,9 +7,11 @@ from app.repositories.interest_repo import InterestRepository
 from app.repositories.match_repo import MatchRepository
 from app.repositories.message_repo import MessageRepository
 from app.services.alert_service import AlertService
+from app.services.llm_validator_service import LLMValidator
 from app.services.message_service import MessageService
 from app.telegram.auth import ensure_authenticated
-from app.telegram.client import get_client
+from app.telegram.bot import start_bot
+from app.telegram.client import get_bot_client, get_client
 from app.telegram.listener import MessageListener
 
 
@@ -19,6 +21,9 @@ async def run_telegram_worker() -> None:
     phone = settings.telegram_phone
     await ensure_authenticated(client, phone)
 
+    bot_client = get_bot_client()
+    await start_bot(bot_client, SessionLocal)
+
     db = SessionLocal()
     try:
         interest_repo = InterestRepository(db)
@@ -26,12 +31,14 @@ async def run_telegram_worker() -> None:
         match_repo = MatchRepository(db)
         interests = interest_repo.list_active()
 
-        alert_service = AlertService(client)
+        alert_service = AlertService(bot_client, SessionLocal)
+        llm_validator = LLMValidator()
 
         message_service = MessageService(
             message_repo=message_repo,
             match_repo=match_repo,
             alert_service=alert_service,
+            llm_validator=llm_validator,
             interests=interests,
         )
 

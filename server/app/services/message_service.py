@@ -8,7 +8,8 @@ from app.models.telegram_message import TelegramMessage
 from app.repositories.match_repo import MatchRepository
 from app.repositories.message_repo import MessageRepository
 from app.services.alert_service import AlertService
-from app.services.matcher_service import composite_matcher, normalize_text
+from app.services.llm_validator_service import LLMValidator
+from app.services.matcher_service import composite_matcher
 
 
 URL_PATTERN = re.compile(r"https?://\S+")
@@ -35,11 +36,13 @@ class MessageService:
         message_repo: MessageRepository,
         match_repo: MatchRepository,
         alert_service: AlertService,
+        llm_validator: LLMValidator,
         interests: list[ProductInterest],
     ) -> None:
         self.message_repo = message_repo
         self.match_repo = match_repo
         self.alert_service = alert_service
+        self.llm_validator = llm_validator
         self.interests = interests
 
     def refresh_interests(self, interests: list[ProductInterest]) -> None:
@@ -58,6 +61,47 @@ class MessageService:
         if not text:
             return
 
+        # Avalia os interesses ANTES de persistir: só guardamos no banco as
+        # mensagens que realmente geram match. Mensagens sem match são descartadas.
+        # Matches reprovados pela IA também são guardados (com aprovado=False), mas
+        # não disparam alerta.
+        candidates: list[tuple[ProductInterest, float, float | None, dict[str, float], str | None, str | None, bool]] = []
+        for interest in self.interests:
+            if not interest.ativo:
+                continue
+
+            score, prices, breakdown, matched_keyword = composite_matcher.match(text, interest)
+
+            threshold = interest.limiar_match or settings.match_score_threshold
+            if score < threshold:
+                continue
+
+            preco = min(prices) if prices else None
+
+            if interest.preco_maximo and preco and preco > interest.preco_maximo:
+                logger.debug(
+                    "price_above_max",
+                    produto=interest.nome_produto,
+                    preco=preco,
+                    max=interest.preco_maximo,
+                )
+                continue
+
+            ok, motivo = await self.llm_validator.validate(text, interest)
+            if not ok:
+                logger.info(
+                    "llm_rejected",
+                    produto=interest.nome_produto,
+                    motivo=motivo,
+                    chat=chat_name,
+                )
+                # Reprovado pela IA: registra o match (sem alertar) para auditoria.
+
+            candidates.append((interest, score, preco, breakdown, matched_keyword, motivo, ok))
+
+        if not candidates:
+            return
+
         if self.message_repo.exists_by_telegram_id(message_id, chat_id):
             return
 
@@ -73,60 +117,43 @@ class MessageService:
             raw_date=raw_date,
         )
 
-        normalized = normalize_text(text)
-
-        for interest in self.interests:
-            if not interest.ativo:
-                continue
-
-            excl_hit = False
-            for excl in interest.palavras_excluidas:
-                if normalize_text(excl) in normalized:
-                    excl_hit = True
-                    break
-            if excl_hit:
-                continue
-
-            score, prices = composite_matcher.match(text, interest)
-
-            if score < settings.match_score_threshold:
-                continue
-
+        for interest, score, preco, breakdown, matched_keyword, motivo, aprovado in candidates:
             if self.match_repo.exists_by_message_and_interest(msg.id, interest.id):
                 continue
 
-            preco = prices[0] if prices else None
-
-            if interest.preco_maximo and preco and preco > interest.preco_maximo:
-                logger.debug(
-                    "price_above_max",
-                    produto=interest.nome_produto,
-                    preco=preco,
-                    max=interest.preco_maximo,
-                )
-                continue
-
-            self.match_repo.create(
+            match = self.match_repo.create(
                 message_id=msg.id,
                 interest_id=interest.id,
                 preco_encontrado=preco,
                 score=score,
                 raw_text_snippet=text[:300],
+                matched_keyword=matched_keyword,
+                llm_motivo=motivo,
+                llm_aprovado=aprovado,
             )
 
             logger.info(
                 "match_found",
                 produto=interest.nome_produto,
                 score=score,
+                keyword_score=breakdown.get("keyword"),
+                fuzzy_score=breakdown.get("fuzzy"),
                 preco=preco,
                 chat=chat_name,
+                aprovado=aprovado,
             )
 
-            await self.alert_service.send_alert(
+            # Reprovado pela IA fica registrado, mas não alerta via Telegram.
+            if not aprovado:
+                continue
+
+            sent = await self.alert_service.send_alert(
                 produto=interest.nome_produto,
                 preco=f"R$ {preco:.2f}" if preco else "Não informado",
-                grupo=chat_name or "Desconhecido",
-                score=score,
-                texto=text,
                 link=build_message_link(chat_id, message_id),
+                chat_id=chat_id,
+                message_id=message_id,
+                texto=text,
             )
+            if sent:
+                self.match_repo.mark_alerted(match.id)

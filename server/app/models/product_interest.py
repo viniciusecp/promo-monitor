@@ -15,6 +15,7 @@ class ProductInterest(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nome_produto: Mapped[str] = mapped_column(String(255), nullable=False)
     preco_maximo: Mapped[float | None] = mapped_column(Float, nullable=True)
+    limiar_match: Mapped[float | None] = mapped_column(Float, nullable=True)
     palavras_chave: Mapped[list[Any]] = mapped_column(JSON, nullable=False, default=list)
     palavras_excluidas: Mapped[list[Any]] = mapped_column(JSON, nullable=False, default=list)
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

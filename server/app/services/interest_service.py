@@ -42,6 +42,7 @@ class InterestService:
             "id": interest.id,
             "nome_produto": interest.nome_produto,
             "preco_maximo": interest.preco_maximo,
+            "limiar_match": interest.limiar_match,
             "palavras_chave": interest.palavras_chave,
             "palavras_excluidas": interest.palavras_excluidas,
             "ativo": interest.ativo,
