@@ -58,8 +58,9 @@ class LLMValidator:
                 api_key=settings.openrouter_api_key,
                 base_url=settings.llm_base_url,
                 temperature=0,
-                max_tokens=200,
+                max_tokens=10000,
                 timeout=settings.llm_timeout,
+                extra_body={"reasoning": {"enabled": False}},
             )
             logger.info("llm_validator_enabled", model=settings.llm_model)
         else:
