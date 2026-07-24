@@ -8,6 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { formatDateTime } from '@/lib/utils'
 import type { MessageResponse } from '@/types'
 
 interface Props {
@@ -59,9 +60,7 @@ export function MessageList({ messages, isLoading }: Props) {
               {msg.text || '—'}
             </TableCell>
             <TableCell className="text-xs text-zinc-500">
-              {msg.raw_date
-                ? new Date(msg.raw_date).toLocaleString('pt-BR')
-                : '—'}
+              {formatDateTime(msg.raw_date)}
             </TableCell>
           </TableRow>
         ))}

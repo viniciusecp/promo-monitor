@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { formatDateTime } from '@/lib/utils'
 import type { MatchDetailResponse } from '@/types'
 
 interface Props {
@@ -31,8 +32,14 @@ function formatScore(score: number) {
   return `${Math.round(score * 100)}%`
 }
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleString('pt-BR')
+const formatDate = formatDateTime
+
+type AlertState = 'sent' | 'failed' | 'skipped'
+
+function alertState(match: MatchDetailResponse): AlertState {
+  if (match.alerted) return 'sent'
+  const approved = match.preco_ok !== false && match.llm_aprovado === true
+  return approved ? 'failed' : 'skipped'
 }
 
 function MatchDetailModal({
@@ -116,6 +123,17 @@ function MatchDetailModal({
                 <p className="whitespace-pre-wrap text-zinc-200">{match.llm_motivo}</p>
               </div>
             )
+          )}
+          {match && alertState(match) === 'failed' && (
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3">
+              <p className="text-xs font-medium text-red-400">Alerta não enviado</p>
+              <p className="mt-1 text-zinc-300">
+                O match foi aprovado, mas o envio da notificação pelo bot falhou. Causa
+                comum: o bot não consegue iniciar conversa — mande{' '}
+                <span className="font-mono text-zinc-100">/start</span> ao bot pela conta
+                configurada como destino dos alertas.
+              </p>
+            </div>
           )}
           {match?.message_link && (
             <a
@@ -201,10 +219,14 @@ export function MatchTable({ matches, isLoading }: Props) {
                 {formatDate(match.created_at)}
               </TableCell>
               <TableCell>
-                {match.alerted
-                  ? <Badge variant="outline" className="border-green-500/30 text-green-400">Sim</Badge>
-                  : <Badge variant="secondary" className="text-zinc-500">Não</Badge>
-                }
+                {(() => {
+                  const st = alertState(match)
+                  if (st === 'sent')
+                    return <Badge variant="outline" className="border-green-500/30 text-green-400">Sim</Badge>
+                  if (st === 'failed')
+                    return <Badge variant="outline" className="border-red-500/40 bg-red-500/10 text-red-400">Falhou</Badge>
+                  return <Badge variant="secondary" className="text-zinc-500">Não</Badge>
+                })()}
               </TableCell>
             </TableRow>
           ))}
