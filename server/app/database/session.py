@@ -30,6 +30,8 @@ _COLUMN_MIGRATIONS: dict[str, dict[str, str]] = {
         "matched_keyword": "TEXT",
         "llm_motivo": "TEXT",
         "llm_aprovado": "BOOLEAN DEFAULT 1",
+        "llm_validado": "BOOLEAN DEFAULT 0",
+        "preco_ok": "BOOLEAN DEFAULT 1",
     },
 }
 

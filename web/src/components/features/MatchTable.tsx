@@ -86,7 +86,25 @@ function MatchDetailModal({
               {match?.message_text || '—'}
             </p>
           </div>
-          {match?.llm_motivo && (
+          {match && match.preco_ok === false && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+              <p className="text-xs font-medium text-amber-400">Acima do preço máximo</p>
+              <p className="mt-1 text-zinc-300">
+                Bateu localmente mas o preço excede o limite do interesse — registrado para
+                auditoria, sem envio à IA e sem alerta.
+              </p>
+            </div>
+          )}
+          {match && match.preco_ok !== false && match.llm_validado === false && (
+            <div className="rounded-lg border border-zinc-800 p-3">
+              <p className="text-xs font-medium text-zinc-400">IA não validou</p>
+              <p className="mt-1 text-zinc-300">
+                A validação por IA estava desativada ou falhou — aprovado automaticamente
+                (fail-open).
+              </p>
+            </div>
+          )}
+          {match?.llm_motivo && match.llm_validado !== false && (
             match.llm_aprovado ? (
               <div className="rounded-lg border border-zinc-800 p-3">
                 <p className="mb-1 text-xs font-medium text-zinc-400">Validação da IA</p>

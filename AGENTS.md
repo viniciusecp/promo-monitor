@@ -9,7 +9,7 @@
 - **SQLite** via SQLAlchemy (WAL mode + foreign keys enabled via `@event.listens_for` in `app/database/session.py`)
 - **Repository pattern** (`BaseRepository[T]` in `app/repositories/base.py`)
 - **Portuguese naming** in models/schemas/routes (`nome_produto`, `preco_maximo`, `palavras_chave`, `palavras_excluidas`, `ativo`)
-- **Composite matching**: KeywordMatchStrategy + FuzzyMatchStrategy (rapidfuzz `partial_ratio`), score = max of both, threshold 0.6. Price extraction via regex (`R$ 1.234,56` etc.)
+- **Composite matching**: keyword (OR-semantics, word boundary) is authoritative — when an interest has any `palavras_chave`, fuzzy (rapidfuzz `token_set_ratio` of `nome_produto`) is forced to 0 and only serves as fallback when there are no keywords. Score = max of both; per-interest `limiar_match` overrides the default threshold 0.6. `palavras_excluidas` is a hard veto. Price extraction via regex (`R$ 1.234,56` etc.), lowest price used, dropped if above `preco_maximo`.
 - **LLM validation** (optional, `app/services/llm_validator_service.py`): matcher candidates are re-checked by an LLM (LangChain + OpenRouter, `LLM_MODEL`) before a match/alert is created. Gated by `OPENROUTER_API_KEY`; fail-open (approves on no-key/disabled/error). Rejections are logged as `llm_rejected`, not stored.
 - **structlog** for structured logging, **pydantic-settings** for config
 
@@ -87,9 +87,12 @@ First-run login: `docker attach telegram-promobot` to type the verification code
 | Method | Path | Notes |
 |--------|------|-------|
 | GET | `/health` | app status |
-| POST | `/interests` | create with `nome_produto`, `preco_maximo`, `palavras_chave`, `palavras_excluidas` |
+| POST | `/interests` | create with `nome_produto`, `preco_maximo`, `limiar_match`, `palavras_chave`, `palavras_excluidas` |
 | GET | `/interests` | filter with `?ativo=true` |
 | PUT | `/interests/{id}` | partial update |
 | DELETE | `/interests/{id}` | — |
-| GET | `/matches` | list matches |
-| GET | `/messages` | list raw messages |
+| GET | `/matches` | list matches (includes LLM-rejected, `llm_aprovado=false`) |
+| GET | `/messages` | list stored (matched) messages |
+| POST | `/matcher/preview` | dry-run scoring of a candidate interest against recent stored messages |
+| GET / PUT | `/settings` | read/update `app_config` (e.g. `alert_target`) |
+| GET | `/telegram/chats` | list the user session's dialogs |

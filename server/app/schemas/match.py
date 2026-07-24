@@ -13,6 +13,8 @@ class MatchResponse(BaseModel):
     matched_keyword: str | None
     llm_motivo: str | None
     llm_aprovado: bool
+    llm_validado: bool
+    preco_ok: bool
     alerted: bool
     alerted_at: datetime | None
     created_at: datetime

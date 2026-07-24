@@ -1,4 +1,5 @@
 import re
+from dataclasses import dataclass
 from datetime import datetime
 
 from app.core.config import settings
@@ -13,6 +14,19 @@ from app.services.matcher_service import composite_matcher
 
 
 URL_PATTERN = re.compile(r"https?://\S+")
+
+
+@dataclass
+class MatchCandidate:
+    interest: ProductInterest
+    score: float
+    preco: float | None
+    breakdown: dict[str, float]
+    matched_keyword: str | None
+    motivo: str | None
+    aprovado: bool
+    validado: bool
+    preco_ok: bool
 
 
 def extract_links(text: str | None) -> list[str]:
@@ -61,11 +75,12 @@ class MessageService:
         if not text:
             return
 
-        # Avalia os interesses ANTES de persistir: só guardamos no banco as
-        # mensagens que realmente geram match. Mensagens sem match são descartadas.
-        # Matches reprovados pela IA também são guardados (com aprovado=False), mas
-        # não disparam alerta.
-        candidates: list[tuple[ProductInterest, float, float | None, dict[str, float], str | None, str | None, bool]] = []
+        # Antes do loop de interesses para não gastar chamadas de LLM reprocessando
+        # uma mensagem já vista.
+        if self.message_repo.exists_by_telegram_id(message_id, chat_id):
+            return
+
+        candidates: list[MatchCandidate] = []
         for interest in self.interests:
             if not interest.ativo:
                 continue
@@ -77,17 +92,33 @@ class MessageService:
                 continue
 
             preco = min(prices) if prices else None
+            preco_ok = not (interest.preco_maximo and preco and preco > interest.preco_maximo)
 
-            if interest.preco_maximo and preco and preco > interest.preco_maximo:
+            if not preco_ok:
+                # Acima do preço: guarda para auditoria mas não chama a LLM (só vale
+                # o custo quando pode virar alerta).
                 logger.debug(
                     "price_above_max",
                     produto=interest.nome_produto,
                     preco=preco,
                     max=interest.preco_maximo,
                 )
+                candidates.append(
+                    MatchCandidate(
+                        interest=interest,
+                        score=score,
+                        preco=preco,
+                        breakdown=breakdown,
+                        matched_keyword=matched_keyword,
+                        motivo=None,
+                        aprovado=False,
+                        validado=False,
+                        preco_ok=False,
+                    )
+                )
                 continue
 
-            ok, motivo = await self.llm_validator.validate(text, interest)
+            ok, motivo, validado = await self.llm_validator.validate(text, interest)
             if not ok:
                 logger.info(
                     "llm_rejected",
@@ -95,14 +126,22 @@ class MessageService:
                     motivo=motivo,
                     chat=chat_name,
                 )
-                # Reprovado pela IA: registra o match (sem alertar) para auditoria.
 
-            candidates.append((interest, score, preco, breakdown, matched_keyword, motivo, ok))
+            candidates.append(
+                MatchCandidate(
+                    interest=interest,
+                    score=score,
+                    preco=preco,
+                    breakdown=breakdown,
+                    matched_keyword=matched_keyword,
+                    motivo=motivo,
+                    aprovado=ok,
+                    validado=validado,
+                    preco_ok=True,
+                )
+            )
 
         if not candidates:
-            return
-
-        if self.message_repo.exists_by_telegram_id(message_id, chat_id):
             return
 
         links = extract_links(text)
@@ -117,39 +156,42 @@ class MessageService:
             raw_date=raw_date,
         )
 
-        for interest, score, preco, breakdown, matched_keyword, motivo, aprovado in candidates:
+        for cand in candidates:
+            interest = cand.interest
             if self.match_repo.exists_by_message_and_interest(msg.id, interest.id):
                 continue
 
             match = self.match_repo.create(
                 message_id=msg.id,
                 interest_id=interest.id,
-                preco_encontrado=preco,
-                score=score,
+                preco_encontrado=cand.preco,
+                score=cand.score,
                 raw_text_snippet=text[:300],
-                matched_keyword=matched_keyword,
-                llm_motivo=motivo,
-                llm_aprovado=aprovado,
+                matched_keyword=cand.matched_keyword,
+                llm_motivo=cand.motivo,
+                llm_aprovado=cand.aprovado,
+                llm_validado=cand.validado,
+                preco_ok=cand.preco_ok,
             )
 
             logger.info(
                 "match_found",
                 produto=interest.nome_produto,
-                score=score,
-                keyword_score=breakdown.get("keyword"),
-                fuzzy_score=breakdown.get("fuzzy"),
-                preco=preco,
+                score=cand.score,
+                keyword_score=cand.breakdown.get("keyword"),
+                fuzzy_score=cand.breakdown.get("fuzzy"),
+                preco=cand.preco,
                 chat=chat_name,
-                aprovado=aprovado,
+                aprovado=cand.aprovado,
+                preco_ok=cand.preco_ok,
             )
 
-            # Reprovado pela IA fica registrado, mas não alerta via Telegram.
-            if not aprovado:
+            if not (cand.preco_ok and cand.aprovado):
                 continue
 
             sent = await self.alert_service.send_alert(
                 produto=interest.nome_produto,
-                preco=f"R$ {preco:.2f}" if preco else "Não informado",
+                preco=f"R$ {cand.preco:.2f}" if cand.preco else "Não informado",
                 link=build_message_link(chat_id, message_id),
                 chat_id=chat_id,
                 message_id=message_id,

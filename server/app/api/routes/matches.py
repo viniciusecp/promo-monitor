@@ -68,6 +68,8 @@ def list_matches(
                 matched_keyword=match.matched_keyword,
                 llm_motivo=match.llm_motivo,
                 llm_aprovado=match.llm_aprovado,
+                llm_validado=match.llm_validado,
+                preco_ok=match.preco_ok,
                 alerted=match.alerted,
                 alerted_at=match.alerted_at,
                 created_at=match.created_at,

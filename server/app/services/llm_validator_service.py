@@ -67,9 +67,14 @@ class LLMValidator:
 
     async def validate(
         self, texto: str | None, interest: ProductInterest
-    ) -> tuple[bool, str | None]:
+    ) -> tuple[bool, str | None, bool]:
+        """Retorna (aprovado, motivo, validado).
+
+        `validado` é False nos caminhos fail-open (desativada/sem texto/erro), para
+        distinguir "IA aprovou" de "IA não rodou".
+        """
         if self.llm is None or not texto:
-            return True, None
+            return True, None, False
         try:
             resp = await self.llm.ainvoke(
                 [
@@ -77,11 +82,12 @@ class LLMValidator:
                     HumanMessage(content=_build_prompt(texto, interest)),
                 ]
             )
-            return _parse_response(str(resp.content))
+            ok, motivo = _parse_response(str(resp.content))
+            return ok, motivo, True
         except Exception as e:
             logger.warning(
                 "llm_validation_error",
                 error=str(e),
                 produto=interest.nome_produto,
             )
-            return True, None
+            return True, None, False

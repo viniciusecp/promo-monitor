@@ -35,11 +35,11 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = None
     llm_validation_enabled: bool = True
     llm_base_url: str = "https://openrouter.ai/api/v1"
-    llm_model: str = "openai/gpt-4o-mini"
+    llm_model: str = "openrouter/free"
     llm_timeout: float = 20.0
 
     api_host: str = "0.0.0.0"
-    api_port: int = 8000
+    api_port: int = 3333
 
     def model_post_init(self, __context) -> None:
         DATA_DIR.mkdir(parents=True, exist_ok=True)

@@ -8,6 +8,8 @@ export interface MatchDetailResponse {
   matched_keyword: string | null
   llm_motivo: string | null
   llm_aprovado: boolean
+  llm_validado: boolean
+  preco_ok: boolean
   alerted: boolean
   alerted_at: string | null
   created_at: string

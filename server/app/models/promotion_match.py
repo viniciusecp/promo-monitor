@@ -20,6 +20,8 @@ class PromotionMatch(Base, TimestampMixin):
     matched_keyword: Mapped[str | None] = mapped_column(Text, nullable=True)
     llm_motivo: Mapped[str | None] = mapped_column(Text, nullable=True)
     llm_aprovado: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    llm_validado: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    preco_ok: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     alerted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
