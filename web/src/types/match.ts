@@ -42,7 +42,7 @@ export interface MatchFilters {
 }
 
 export const DEFAULT_MATCH_FILTERS: MatchFilters = {
-  periodo: '7d',
+  periodo: 'hoje',
   status: [],
   nao_lidos: false,
   order_by: 'data',

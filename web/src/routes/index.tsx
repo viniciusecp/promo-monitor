@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { CheckCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MatchStats } from '@/components/features/matches/MatchStats'
+import { LastUpdated } from '@/components/features/matches/LastUpdated'
 import { MatchFilterBar } from '@/components/features/matches/MatchFilterBar'
 import { MatchFeed } from '@/components/features/matches/MatchFeed'
 import { useMarkAllRead, useMatchStats } from '@/hooks/useMatches'
@@ -23,6 +24,8 @@ function MatchesFeedPage() {
   return (
     <div className="space-y-4">
       <MatchStats />
+
+      <LastUpdated filters={filters} />
 
       <MatchFilterBar filters={filters} onChange={setFilters} />
 
