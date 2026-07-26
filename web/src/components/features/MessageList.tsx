@@ -41,7 +41,7 @@ export function MessageList({ messages, isLoading }: Props) {
         <TableRow className="border-zinc-800">
           <TableHead className="text-zinc-400">Grupo</TableHead>
           <TableHead className="text-zinc-400">Remetente</TableHead>
-          <TableHead className="w-96 text-zinc-400">Texto</TableHead>
+          <TableHead className="text-zinc-400 md:w-96">Texto</TableHead>
           <TableHead className="text-zinc-400">Data</TableHead>
         </TableRow>
       </TableHeader>
@@ -56,7 +56,7 @@ export function MessageList({ messages, isLoading }: Props) {
             <TableCell className="text-zinc-400">
               {msg.sender_name || '—'}
             </TableCell>
-            <TableCell className="max-w-96 truncate text-zinc-300">
+            <TableCell className="max-w-[14rem] truncate text-zinc-300 md:max-w-96">
               {msg.text || '—'}
             </TableCell>
             <TableCell className="text-xs text-zinc-500">
