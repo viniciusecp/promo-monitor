@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from telethon import TelegramClient
 
 from app.core.config import settings
+from app.core.logging import logger
 
 
 _client: TelegramClient | None = None
@@ -38,3 +41,67 @@ def get_bot_client() -> TelegramClient:
 async def is_connected() -> bool:
     client = get_client()
     return client.is_connected()
+
+
+async def is_authorized() -> bool:
+    client = get_client()
+    if not client.is_connected():
+        return False
+    try:
+        return await client.is_user_authorized()
+    except Exception as e:
+        logger.warning("is_authorized_failed", error=str(e))
+        return False
+
+
+def _delete_session_files(path_str: str) -> None:
+    """Apaga o arquivo de sessão e o journal do SQLite que o Telethon usa."""
+    path = Path(path_str)
+    for candidate in (path, path.with_name(path.name + "-journal")):
+        try:
+            candidate.unlink(missing_ok=True)
+        except OSError as e:
+            logger.warning("session_unlink_failed", path=str(candidate), error=str(e))
+
+
+async def _disconnect(client: TelegramClient | None) -> None:
+    if client is None or not client.is_connected():
+        return
+    try:
+        result = client.disconnect()
+        if result is not None:
+            await result
+    except Exception as e:
+        logger.warning("client_disconnect_failed", error=str(e))
+
+
+async def reset_client(delete_session: bool = False) -> None:
+    """Descarta o cliente de usuário para que o próximo `get_client()` construa
+    um novo. Depois de `log_out()` o objeto fica com a sessão morta e não dá
+    para reautenticar nele."""
+    global _client
+    await _disconnect(_client)
+    _client = None
+    if delete_session:
+        _delete_session_files(settings.telegram_session_file)
+
+
+async def reset_bot_client(delete_session: bool = False) -> None:
+    """Idem para o bot.
+
+    `delete_session=True` é obrigatório na troca de token: o `start(bot_token=)`
+    do Telethon só faz sign-in quando a sessão ainda não está autorizada, então
+    um `bot.session` antigo faria o token novo ser silenciosamente ignorado e os
+    alertas continuariam saindo pelo bot anterior.
+    """
+    global _bot_client
+    await _disconnect(_bot_client)
+    _bot_client = None
+    if delete_session:
+        _delete_session_files(settings.telegram_bot_session_file)
+
+
+async def disconnect_clients() -> None:
+    """Desconecta os dois clientes no shutdown, sem descartar os singletons."""
+    await _disconnect(_client)
+    await _disconnect(_bot_client)

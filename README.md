@@ -38,11 +38,15 @@ Você precisa das credenciais da API do Telegram (`my.telegram.org/apps`) e, par
 ```bash
 cd server
 python3 -m venv .venv && source .venv/bin/activate
-cp .env.example .env      # preencha TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_PHONE, TELEGRAM_BOT_TOKEN
+cp .env.example .env      # preencha TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_PHONE
 pip install -r requirements.txt
 python3 run.py            # lê API_HOST/API_PORT do .env
 ```
-Na **primeira execução** o processo bloqueia em `input()` pedindo o código de verificação enviado ao Telegram. Depois a sessão é salva e reutilizada. Mande `/start` no seu bot para registrar o chat de destino dos alertas.
+Na **primeira execução** o backend sobe sem sessão e fica aguardando: abra o painel,
+você cai na tela de login, clique em **Enviar código** e digite ali mesmo o código que
+o Telegram mandou (mais a senha de duas etapas, se você usar). Depois a sessão é salva
+e reutilizada. O token do bot é colado em **Configurações** no painel, e mandar `/start`
+para ele registra o chat de destino dos alertas sem recarregar a página.
 
 **Frontend** (porta 3000):
 ```bash
@@ -101,13 +105,17 @@ docker compose up --build -d
 ```
 
 ### 4. Login do Telegram (apenas na 1ª vez)
-O backend bloqueia pedindo o código de verificação. Anexe ao container, digite o código e
-**solte o terminal sem matar o container** com `Ctrl-P` `Ctrl-Q`:
-```bash
-docker attach promo-monitor-backend
-```
+Abra o painel em `http://SEU_SERVIDOR:${WEB_PORT}`. Sem sessão salva, você cai direto na
+tela de **login**: clique em **Enviar código**, digite o código que chegou no app do
+Telegram (e a senha de duas etapas, se você usar) e pronto — a captura começa sozinha.
+Nada de `docker attach`.
+
 A sessão fica salva no volume (`server/session/`); as próximas subidas não pedem código.
-Depois, mande **`/start`** para o seu bot no Telegram para registrar o chat dos alertas.
+Depois, cole o token do bot em **Configurações** e mande **`/start`** para ele no Telegram
+para registrar o chat dos alertas.
+
+> As rotas de login e configuração **não têm autenticação**, de propósito: este painel é
+> feito para rodar num servidor local seu. Não exponha a porta do backend na internet.
 
 ### 5. Acessar e operar
 - Painel: `http://SEU_SERVIDOR:${WEB_PORT}` · API: `http://SEU_SERVIDOR:${API_PORT}`

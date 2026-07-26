@@ -9,6 +9,8 @@ from app.core.config import settings
 from app.core.logging import logger, setup_logging
 from app.database.base import Base
 from app.database.session import engine, ensure_columns
+from app.telegram.client import disconnect_clients
+from app.workers.supervisor import supervisor
 from app.workers.telegram_worker import run_telegram_worker
 
 
@@ -19,16 +21,22 @@ async def lifespan(app: FastAPI):
     ensure_columns()
     logger.info("database_ready")
 
-    task = asyncio.create_task(run_telegram_worker())
-    logger.info("telegram_worker_started")
+    # O boot é assíncrono de propósito: se não houver sessão válida ele apenas
+    # loga e sai, e a API sobe para servir a tela de login.
+    app.state.telegram_task = asyncio.create_task(
+        run_telegram_worker(), name="telegram_boot"
+    )
+    logger.info("telegram_boot_scheduled")
 
     yield
 
-    task.cancel()
+    app.state.telegram_task.cancel()
     try:
-        await task
+        await app.state.telegram_task
     except asyncio.CancelledError:
         pass
+    await supervisor.stop()
+    await disconnect_clients()
     logger.info("shutdown_complete")
 
 

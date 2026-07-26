@@ -1,58 +1,52 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SettingsForm } from '@/components/features/SettingsForm'
+import { AlertStatus } from '@/components/features/AlertStatus'
 import { BotSetupGuide } from '@/components/features/BotSetupGuide'
-import { useSettings, useUpdateSettings } from '@/hooks/useSettings'
+import { BotTokenForm } from '@/components/features/BotTokenForm'
+import { ConnectionCard } from '@/components/features/ConnectionCard'
+import { useSettings } from '@/hooks/useSettings'
 
 export const Route = createFileRoute('/settings')({
   component: Settings,
 })
 
 function Settings() {
-  const { data, isLoading } = useSettings()
-  const updateMutation = useUpdateSettings()
-
-  function handleSubmit(payload: { alert_target: string | null }) {
-    updateMutation.mutate(payload, {
-      onSuccess: () => toast.success('Configurações salvas'),
-      onError: () => toast.error('Erro ao salvar configurações'),
-    })
-  }
+  // poll: o handler `/start` do bot grava `alert_target` no servidor; sem o
+  // refetch o estado do destino só mudaria depois de recarregar a página.
+  const { data, isLoading } = useSettings({ poll: true })
 
   return (
     <div className="max-w-lg space-y-6">
       <Card className="border-zinc-800 bg-zinc-950 text-zinc-100">
         <CardHeader>
           <CardTitle className="text-sm font-medium text-zinc-200">
-            Como criar o bot de notificações
+            Conexão
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <BotSetupGuide />
+          <ConnectionCard />
         </CardContent>
       </Card>
 
       <Card className="border-zinc-800 bg-zinc-950 text-zinc-100">
         <CardHeader>
           <CardTitle className="text-sm font-medium text-zinc-200">
-            Destino dos alertas
+            Como criar o bot de notificações
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          <BotSetupGuide />
           {isLoading ? (
             <div className="space-y-3">
-              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-28" />
               <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-24" />
             </div>
           ) : (
-            <SettingsForm
-              defaultValues={data}
-              onSubmit={handleSubmit}
-              isPending={updateMutation.isPending}
-            />
+            <>
+              <BotTokenForm settings={data} />
+              <AlertStatus settings={data} />
+            </>
           )}
         </CardContent>
       </Card>

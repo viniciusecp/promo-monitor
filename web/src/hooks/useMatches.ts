@@ -66,14 +66,17 @@ export function useMatchesInfinite(filters: MatchFilters) {
       ),
     getNextPageParam: (last, all) =>
       last.has_more ? all.reduce((n, p) => n + p.items.length, 0) : undefined,
-    // Só faz polling enquanto o usuário está na primeira página. Com paginação
-    // por offset, um refetch com N páginas carregadas re-busca TODAS elas; se
-    // chegou match novo no topo, as fronteiras deslocam e as linhas duplicam
-    // ou somem. O badge de não lidos continua vivo via /matches/stats, que
-    // faz polling incondicional — então o usuário ainda percebe o que chegou.
-    refetchInterval: (query) =>
-      (query.state.data?.pages.length ?? 1) > 1 ? false : 30_000,
-    refetchIntervalInBackground: false,
+    // Sem polling em intervalo: a lista só se atualiza sozinha quando o usuário
+    // volta para a aba (o refetch de foco do TanStack Query escuta
+    // `visibilitychange`), respeitando o `staleTime` global — alternar de aba
+    // por 2s não dispara request.
+    //
+    // A guarda de página continua valendo: com paginação por offset, um refetch
+    // com N páginas carregadas re-busca TODAS elas; se chegou match novo no
+    // topo, as fronteiras deslocam e as linhas duplicam ou somem. A partir da
+    // página 2 o `LastUpdated` envelhece à vista e o botão de atualizar é a
+    // saída manual.
+    refetchOnWindowFocus: (query) => (query.state.data?.pages.length ?? 1) === 1,
   })
 }
 
@@ -84,7 +87,10 @@ export function useMatchStats() {
       api.get<MatchStatsResponse>(
         `/matches/stats?tz=${encodeURIComponent(TZ)}`,
       ),
-    refetchInterval: 30_000,
+    // Mesma regra da lista: atualiza quando o usuário volta para a aba, não em
+    // intervalo. Sem guarda de página aqui — stats é uma request só, sempre
+    // segura de refazer. (É o default do v5; explícito porque é uma decisão.)
+    refetchOnWindowFocus: true,
   })
 }
 

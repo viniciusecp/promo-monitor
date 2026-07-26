@@ -50,7 +50,7 @@ Variáveis de ambiente:
 | `TELEGRAM_API_ID` | sim | — | API ID obtido em my.telegram.org/apps |
 | `TELEGRAM_API_HASH` | sim | — | API hash obtido em my.telegram.org/apps |
 | `TELEGRAM_PHONE` | sim | — | Telefone da conta que escuta os grupos (com DDI) |
-| `TELEGRAM_BOT_TOKEN` | não* | vazio | Token do bot (@BotFather). Sem ele, nenhuma notificação é enviada |
+| `TELEGRAM_BOT_TOKEN` | não* | vazio | Token do bot (@BotFather). **Só semeia o valor inicial** — depois da primeira subida o token vive no banco (`app_config`) e é editado em Configurações no painel, valendo na hora |
 | `MATCH_SCORE_THRESHOLD` | não | `0.6` | Score mínimo (0–1) para considerar match |
 | `OPENROUTER_API_KEY` | não | vazio | Ativa a validação por LLM. Sem ela, só o matcher decide |
 | `LLM_MODEL` | não | `openrouter/free` | ID do modelo no OpenRouter (aceita variantes `:free`) |
@@ -76,7 +76,10 @@ O `run.py` lê `API_HOST`/`API_PORT` do `.env` (porta padrão **3333**) e já so
 
 > O CLI do uvicorn **não** lê o `.env`: `uvicorn app.main:app --reload` sobe na porta padrão `8000`. Se preferir usar o CLI, informe a porta na mão: `uvicorn app.main:app --reload --port 3333`.
 
-Na primeira execução, o sistema pedirá o código de verificação enviado ao Telegram. Após autenticar, a sessão é salva e reutilizada automaticamente.
+Na primeira execução não há sessão salva: o backend registra `telegram_login_required` e
+segue servindo HTTP normalmente. O login é feito pelo painel (`/login` → **Enviar código**),
+que fala com `POST /telegram/auth/request-code` e `/code`. Após autenticar, a sessão é
+salva e reutilizada automaticamente, e o pipeline de captura sobe sozinho.
 
 > Com `--reload`, salvar um arquivo `.py` reinicia o processo — e isso reinicia o worker do Telegram junto (ele sobe no `lifespan`). A sessão já está salva, então não pede o código de novo, mas há uma breve reconexão a cada reload.
 
@@ -86,13 +89,20 @@ Na primeira execução, o sistema pedirá o código de verificação enviado ao 
 docker compose up --build
 ```
 
-> **Importante no Docker:** O login interativo (código do Telegram) requer `stdin_open: true` e `tty: true` no docker-compose. Conecte no container com `docker attach telegram-promobot` para digitar o código na primeira execução.
+> O `docker-compose.yml` fica na **raiz** do repositório e o container do backend se chama
+> `promo-monitor-backend`. Não é mais preciso `stdin_open`/`tty` nem `docker attach`: o
+> código de verificação é digitado no painel web.
 
 ## Endpoints da API
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/health` | Status da aplicação |
+| GET | `/health` | Status: `telegram_connected`, `telegram_authenticated`, `worker_running`, `bot_connected` |
+| GET | `/telegram/auth/status` | Estado do login (telefone mascarado, etapa atual, erro) |
+| POST | `/telegram/auth/request-code` | Envia o código para `TELEGRAM_PHONE` |
+| POST | `/telegram/auth/code` | Envia o código digitado (`{code}`) |
+| POST | `/telegram/auth/password` | Senha de duas etapas (`{password}`) |
+| POST | `/telegram/auth/logout` | Encerra a sessão e para a captura |
 | GET | `/interests` | Listar interesses |
 | POST | `/interests` | Criar interesse |
 | GET | `/interests/{id}` | Obter interesse |
@@ -100,9 +110,9 @@ docker compose up --build
 | DELETE | `/interests/{id}` | Remover interesse |
 | GET | `/matches` | Listar matches |
 | GET | `/messages` | Listar mensagens |
-| GET | `/settings` | Obter configurações (destino dos alertas) |
-| PUT | `/settings` | Definir o destino dos alertas (`alert_target`) |
-| GET | `/telegram/chats` | Listar seus grupos/conversas (para escolher o destino) |
+| GET | `/settings` | Destino dos alertas (read-only) + estado do bot (token mascarado, nunca cru) |
+| PUT | `/settings` | Atualização **parcial** do `telegram_bot_token` |
+| POST | `/settings/alert/test` | Manda uma mensagem de teste para o destino configurado |
 
 ### Exemplos de requests
 
@@ -123,13 +133,11 @@ curl "http://localhost:3333/interests?ativo=true"
 # Listar matches
 curl "http://localhost:3333/matches?limit=10"
 
-# Listar seus grupos/conversas (para descobrir o ID do destino)
-curl http://localhost:3333/telegram/chats
-
-# Definir o destino dos alertas (normalmente feito pelo painel; aceita ID numérico ou @username)
+# Trocar o token do bot (vale na hora, sem restart). O destino dos alertas não
+# é editável por aqui: mande /start ao bot pelo Telegram.
 curl -X PUT http://localhost:3333/settings \
   -H "Content-Type: application/json" \
-  -d '{"alert_target": "-1001234567890"}'
+  -d '{"telegram_bot_token": "123456789:AAE...xyz"}'
 
 # Health check
 curl http://localhost:3333/health
@@ -174,7 +182,7 @@ só no log como `llm_rejected`). É *fail-open*: sem a key, desabilitado, ou em
 erro/timeout, o candidato é aprovado normalmente (nenhuma promo real é perdida por
 falha transitória).
 
-A notificação é enviada por um **segundo client Telethon logado como bot** (`TELEGRAM_BOT_TOKEN`), separado da conta de usuário que escuta os grupos. Os dois clients rodam no mesmo event loop dentro do processo FastAPI. O bot também responde `/start` (registra o chat em `alert_target`) e `/id`. O destino (`alert_target`) é lido do banco no momento do envio, então alterações pelo painel ou via `/start` valem na hora. Se estiver vazio, ou sem `TELEGRAM_BOT_TOKEN`, **nada é enviado**.
+A notificação é enviada por um **segundo client Telethon logado como bot** (token em `app_config.telegram_bot_token`, semeado a partir de `TELEGRAM_BOT_TOKEN`), separado da conta de usuário que escuta os grupos. Trocar o token pelo painel derruba e sobe o client na hora — o `bot.session` é apagado nessa troca, senão o Telethon reaproveitaria a sessão do bot anterior e o token novo seria ignorado em silêncio. Os dois clients rodam no mesmo event loop dentro do processo FastAPI. O bot também responde `/start` (registra o chat em `alert_target`) e `/id`. **O `/start` é a única forma de definir o destino** — o painel só mostra o estado, nunca escreve o campo. Isso garante que o destino é sempre um chat onde o bot consegue escrever (escolher um grupo à mão do qual o bot não é membro só produzia erro no envio). O destino é lido do banco no momento do envio, então um `/start` novo vale na hora. Se estiver vazio, ou sem `TELEGRAM_BOT_TOKEN`, **nada é enviado**.
 
 ### Matching
 

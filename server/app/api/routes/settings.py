@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.repositories.app_config_repo import AppConfigRepository
-from app.schemas.app_config import SettingsResponse, SettingsUpdate
+from app.schemas.app_config import AlertTestResponse, SettingsResponse, SettingsUpdate
 from app.services.app_config_service import AppConfigService
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
@@ -20,8 +20,13 @@ def get_settings(service: AppConfigService = Depends(get_service)):
 
 
 @router.put("", response_model=SettingsResponse)
-def update_settings(
+async def update_settings(
     data: SettingsUpdate,
     service: AppConfigService = Depends(get_service),
 ):
-    return service.update(data)
+    return await service.update(data)
+
+
+@router.post("/alert/test", response_model=AlertTestResponse)
+async def test_alert(service: AppConfigService = Depends(get_service)):
+    return await service.send_test_alert()

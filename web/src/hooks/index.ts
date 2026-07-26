@@ -15,5 +15,12 @@ export {
   useMarkAllRead,
 } from './useMatches'
 export { useMessages } from './useMessages'
-export { useSettings, useUpdateSettings } from './useSettings'
-export { useTelegramChats } from './useTelegramChats'
+export { useSettings, useUpdateSettings, useTestAlert } from './useSettings'
+export {
+  useAuthStatus,
+  useRequestCode,
+  useSubmitCode,
+  useSubmitPassword,
+  useLogout,
+  authKeys,
+} from './useTelegramAuth'

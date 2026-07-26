@@ -20,10 +20,11 @@ function formatAgo(ms: number) {
  * Mostra quando os dados da lista foram buscados pela última vez.
  *
  * Usa deliberadamente o timestamp da *lista*, e não o de /matches/stats: a
- * lista para de fazer polling a partir da página 2, então é justamente aí que
- * o "há X min" precisa envelhecer à vista — junto com o botão de atualizar,
- * que é a saída. Mostrar o timestamp do stats (que sempre faz polling) diria
- * "agora mesmo" com a lista parada.
+ * lista só se atualiza sozinha quando o usuário volta para a aba, e nem isso a
+ * partir da página 2 — então é aqui que o "há X min" precisa envelhecer à
+ * vista, junto com o botão de atualizar, que é a saída manual. Mostrar o
+ * timestamp do stats (que refaz o fetch sempre no foco) diria "agora mesmo"
+ * com a lista parada.
  *
  * Chamar useMatchesInfinite aqui não dispara request extra: mesma queryKey do
  * MatchFeed, mesma entrada de cache.

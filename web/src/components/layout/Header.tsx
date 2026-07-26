@@ -9,6 +9,7 @@ const titles: Record<string, string> = {
   '/interests/new': 'Novo Interesse',
   '/messages': 'Mensagens',
   '/settings': 'Configurações',
+  '/login': 'Conectar Telegram',
 }
 
 function findTitle(pathname: string) {

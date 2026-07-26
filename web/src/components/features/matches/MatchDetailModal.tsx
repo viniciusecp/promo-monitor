@@ -23,7 +23,8 @@ export function MatchDetailModal({
       markRead.mutate({ id: matchId, lido: true })
     }
     // Depende de matchId, e não do objeto `match`: a identidade dele muda a
-    // cada poll, o que re-dispararia o POST a cada 30s com o modal aberto.
+    // cada refetch da lista, o que re-dispararia o POST toda vez que o usuário
+    // voltasse para a aba com o modal aberto.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, matchId])
 

@@ -7,7 +7,7 @@ from app.api.routes import (
     matches,
     messages,
     settings,
-    telegram,
+    telegram_auth,
 )
 
 api_router = APIRouter()
@@ -17,4 +17,4 @@ api_router.include_router(matcher.router)
 api_router.include_router(matches.router)
 api_router.include_router(messages.router)
 api_router.include_router(settings.router)
-api_router.include_router(telegram.router)
+api_router.include_router(telegram_auth.router)

@@ -14,5 +14,13 @@ export type {
 export { DEFAULT_MATCH_FILTERS } from './match'
 export type { MessageResponse, MessageFilters } from './message'
 export type { HealthResponse } from './health'
-export type { SettingsResponse, SettingsUpdate } from './settings'
-export type { TelegramChat } from './telegram'
+export type {
+  SettingsResponse,
+  SettingsUpdate,
+  AlertTestResponse,
+} from './settings'
+export type {
+  TelegramAuthStatus,
+  AuthUser,
+  AuthStatusResponse,
+} from './auth'

@@ -14,8 +14,6 @@ services:
     volumes:
       - ./server/data:/app/data
       - ./server/session:/app/session
-    stdin_open: true   # necessário p/ o login interativo do Telegram na 1ª subida
-    tty: true
 
   web:
     build:

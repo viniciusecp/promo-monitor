@@ -2,11 +2,26 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3333'
 
 class ApiError extends Error {
   status: number
+  /** Código estável vindo de `detail.code` no backend (ex.: 'code_invalid').
+   *  A UI decide a mensagem por ele, não pelo status HTTP. */
+  code: string | null = null
+  detailMessage: string | null = null
+  retryAfter: number | null = null
 
   constructor(status: number, message: string) {
     super(message)
     this.status = status
     this.name = 'ApiError'
+    try {
+      const detail = JSON.parse(message)?.detail
+      if (detail && typeof detail === 'object') {
+        this.code = detail.code ?? null
+        this.detailMessage = detail.message ?? null
+        this.retryAfter = detail.retry_after ?? null
+      }
+    } catch {
+      // corpo não-JSON (ex.: 502 do nginx) — segue só com status/texto
+    }
   }
 }
 

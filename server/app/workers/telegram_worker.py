@@ -1,70 +1,53 @@
+"""Rotina de boot do Telegram.
+
+Conecta e, se a sessão salva ainda valer, sobe o pipeline como antes. Se não
+valer, **não faz nada** e apenas registra que falta login: o usuário resolve
+pelo painel (`/login` → `POST /telegram/auth/request-code`). Nada de `input()`,
+nada de bloquear o event loop, e nada de mandar código sozinho — com
+`restart: on-failure:5` no compose isso queimaria um código por restart até cair
+num FloodWait de horas.
+"""
+
 import asyncio
 
-from app.core.config import settings
 from app.core.logging import logger
-from app.database.session import SessionLocal
-from app.repositories.interest_repo import InterestRepository
-from app.repositories.match_repo import MatchRepository
-from app.repositories.message_repo import MessageRepository
-from app.services.alert_service import AlertService
-from app.services.llm_validator_service import LLMValidator
-from app.services.message_service import MessageService
-from app.telegram.auth import ensure_authenticated
-from app.telegram.bot import start_bot
-from app.telegram.client import get_bot_client, get_client
-from app.telegram.listener import MessageListener
+from app.telegram.auth import authenticator
+from app.workers.supervisor import supervisor
+
+_CONNECT_ATTEMPTS = 5
+_CONNECT_BACKOFF = 3
 
 
 async def run_telegram_worker() -> None:
-    client = get_client()
-    await client.start()
-    phone = settings.telegram_phone
-    await ensure_authenticated(client, phone)
+    snapshot = None
 
-    bot_client = get_bot_client()
-    await start_bot(bot_client, SessionLocal)
+    for attempt in range(1, _CONNECT_ATTEMPTS + 1):
+        try:
+            snapshot = await authenticator.bootstrap()
+            break
+        except Exception as e:
+            # Em Docker a rede pode não estar pronta na primeira tentativa.
+            if attempt == _CONNECT_ATTEMPTS:
+                logger.error(
+                    "telegram_boot_failed",
+                    error=str(e),
+                    attempts=attempt,
+                    exc_info=True,
+                )
+                return
+            logger.warning(
+                "telegram_boot_retry", error=str(e), attempt=attempt
+            )
+            await asyncio.sleep(_CONNECT_BACKOFF * attempt)
 
-    db = SessionLocal()
+    if snapshot is None or snapshot.status != "authenticated":
+        logger.warning(
+            "telegram_login_required",
+            hint="abra o painel e faça o login em /login",
+        )
+        return
+
     try:
-        interest_repo = InterestRepository(db)
-        message_repo = MessageRepository(db)
-        match_repo = MatchRepository(db)
-        interests = interest_repo.list_active()
-
-        alert_service = AlertService(bot_client, SessionLocal)
-        llm_validator = LLMValidator()
-
-        message_service = MessageService(
-            message_repo=message_repo,
-            match_repo=match_repo,
-            alert_service=alert_service,
-            llm_validator=llm_validator,
-            interests=interests,
-        )
-
-        listener = MessageListener(client=client, message_service=message_service)
-        await listener.start()
-
-        logger.info(
-            "worker_started",
-            chats_count=len(await client.get_dialogs()),
-            interests_count=len(interests),
-        )
-
-        async def refresh_interests() -> None:
-            while True:
-                await asyncio.sleep(60)
-                db2 = SessionLocal()
-                try:
-                    repo2 = InterestRepository(db2)
-                    active = repo2.list_active()
-                    message_service.refresh_interests(active)
-                    logger.debug("interests_refreshed", count=len(active))
-                finally:
-                    db2.close()
-
-        asyncio.create_task(refresh_interests())
-
-        await client.run_until_disconnected()
-    finally:
-        db.close()
+        await supervisor.ensure_started()
+    except Exception as e:
+        logger.error("worker_bootstrap_failed", error=str(e), exc_info=True)

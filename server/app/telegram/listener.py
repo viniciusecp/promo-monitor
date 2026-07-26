@@ -11,8 +11,16 @@ class MessageListener:
     def __init__(self, client: TelegramClient, message_service: MessageService) -> None:
         self.client = client
         self.message_service = message_service
+        self._handler_registered = False
 
     async def start(self) -> None:
+        # Idempotente de propósito: com o login pela web, `ensure_started()` do
+        # supervisor pode ser chamado mais de uma vez (boot + POST de login que
+        # chegou atrasado). Registrar o handler duas vezes faria cada mensagem
+        # ser processada em dobro — matches e alertas duplicados.
+        if self._handler_registered:
+            return
+
         # Só processa grupos/canais e mensagens recebidas. Ignora DMs (inclusive
         # a DM que o bot envia ao próprio usuário) e mensagens enviadas pela
         # própria conta — isso evita o loop de feedback em que um alerta vira
@@ -21,7 +29,18 @@ class MessageListener:
             self._on_new_message,
             NewMessage(incoming=True, func=lambda e: e.is_group or e.is_channel),
         )
+        self._handler_registered = True
         logger.info("listener_started")
+
+    async def stop(self) -> None:
+        if not self._handler_registered:
+            return
+        try:
+            self.client.remove_event_handler(self._on_new_message)
+        except Exception as e:
+            logger.warning("listener_stop_failed", error=str(e))
+        self._handler_registered = False
+        logger.info("listener_stopped")
 
     async def _on_new_message(self, event: NewMessage.Event) -> None:
         try:

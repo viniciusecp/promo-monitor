@@ -36,7 +36,7 @@ src/
 │   ├── interests/       #   Listar / criar / editar interesses
 │   ├── matches/         #   Matches encontrados
 │   ├── messages/        #   Mensagens capturadas
-│   └── settings.tsx     #   Destino dos alertas + guia de setup do bot
+│   └── settings.tsx     #   Conexão + guia/token do bot e estado dos alertas
 ├── components/
 │   ├── features/        # Componentes de domínio (InterestForm, MatchTable, ...)
 │   ├── layout/          # Header, Sidebar
@@ -55,7 +55,7 @@ src/
 | `/interests` | CRUD de interesses (produto, preço máximo, palavras-chave, exclusões) |
 | `/matches` | Promoções que bateram com seus interesses |
 | `/messages` | Mensagens brutas capturadas dos grupos |
-| `/settings` | Define o `alert_target` (destino dos alertas) e mostra o guia de configuração do bot |
+| `/settings` | Conexão do Telegram, guia + token do bot e estado dos alertas (o destino é definido mandando `/start` ao bot, não pelo painel) |
 
 ## Notas
 

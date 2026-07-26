@@ -1,3 +1,5 @@
+from typing import Callable
+
 from telethon import TelegramClient
 
 from app.core.logging import logger
@@ -32,8 +34,15 @@ def _build_body(produto: str, preco: str, texto: str | None, link: str) -> str:
 
 
 class AlertService:
-    def __init__(self, bot_client: TelegramClient, session_factory) -> None:
-        self.bot_client = bot_client
+    def __init__(
+        self,
+        bot_provider: Callable[[], TelegramClient | None],
+        session_factory,
+    ) -> None:
+        # Provider, não instância: o token do bot é trocável a quente, e guardar
+        # o cliente aqui deixaria este serviço com uma referência morta para
+        # sempre depois da primeira troca.
+        self.bot_provider = bot_provider
         self.session_factory = session_factory
 
     def _get_target(self):
@@ -59,12 +68,13 @@ class AlertService:
                 logger.info("alert_skipped_no_target", produto=produto)
                 return False
 
-            if self.bot_client is None or not self.bot_client.is_connected():
+            bot_client = self.bot_provider()
+            if bot_client is None or not bot_client.is_connected():
                 logger.warning("alert_skipped_bot_unavailable", produto=produto)
                 return False
 
             body = _build_body(produto, preco, texto, link)
-            await self.bot_client.send_message(target, body)
+            await bot_client.send_message(target, body)
             logger.info("alert_sent", produto=produto, target=str(target))
             return True
         except Exception as e:

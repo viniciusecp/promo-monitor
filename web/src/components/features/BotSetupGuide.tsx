@@ -36,11 +36,12 @@ const steps = [
     ),
   },
   {
-    title: 'Configure no servidor',
+    title: 'Cole o token aqui',
     body: (
       <>
-        No arquivo <Code>.env</Code> do backend, cole o token em{' '}
-        <Code>TELEGRAM_BOT_TOKEN=</Code> e reinicie o servidor.
+        Cole o token no campo <strong>Token do bot</strong>, logo abaixo, e
+        clique em <Code>Salvar token</Code>. Vale na hora — não precisa mexer em
+        arquivo nem reiniciar o servidor.
       </>
     ),
   },
@@ -49,8 +50,9 @@ const steps = [
     body: (
       <>
         Abra o seu bot recém-criado no Telegram e mande <Code>/start</Code>. Ele
-        confirma e preenche o campo abaixo automaticamente. Pronto — as promoções
-        chegam na sua conversa com o bot, com notificação.
+        confirma e registra essa conversa como destino sozinho, sem recarregar a
+        página. Pronto — as promoções chegam na sua conversa com o bot, com
+        notificação.
       </>
     ),
   },

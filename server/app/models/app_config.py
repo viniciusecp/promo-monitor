@@ -13,6 +13,10 @@ class AppConfig(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     alert_target: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Token do bot de notificações. O `.env` só semeia o valor inicial; a partir
+    # daí o banco é a fonte da verdade, para que a troca pelo painel valha na
+    # hora e "limpar o campo" signifique desativado (sem re-seed no restart).
+    telegram_bot_token: Mapped[str | None] = mapped_column(String(255), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(),
