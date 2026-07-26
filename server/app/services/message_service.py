@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.core.config import settings
+from app.core.links import build_message_link
 from app.core.logging import logger
 from app.models.product_interest import ProductInterest
 from app.models.telegram_message import TelegramMessage
@@ -33,15 +34,6 @@ def extract_links(text: str | None) -> list[str]:
     if not text:
         return []
     return URL_PATTERN.findall(text)
-
-
-def build_message_link(chat_id: int, message_id: int) -> str:
-    chat_id_str = str(chat_id)
-    if chat_id_str.startswith("-100"):
-        chat_id_str = chat_id_str[4:]
-    elif chat_id_str.startswith("-"):
-        chat_id_str = chat_id_str[1:]
-    return f"https://t.me/c/{chat_id_str}/{message_id}"
 
 
 class MessageService:

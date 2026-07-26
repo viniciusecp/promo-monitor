@@ -8,6 +8,12 @@ class InterestNotFoundError(AppException):
         super().__init__(f"Interest {interest_id} not found")
 
 
+class MatchNotFoundError(AppException):
+    def __init__(self, match_id: int) -> None:
+        self.match_id = match_id
+        super().__init__(f"Match {match_id} not found")
+
+
 class TelegramNotConnectedError(AppException):
     def __init__(self) -> None:
         super().__init__("Telegram client is not connected")

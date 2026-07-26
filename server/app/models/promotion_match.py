@@ -24,6 +24,8 @@ class PromotionMatch(Base, TimestampMixin):
     preco_ok: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     alerted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lido: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    lido_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     message: Mapped["TelegramMessage"] = relationship(
         "TelegramMessage", back_populates="matches"

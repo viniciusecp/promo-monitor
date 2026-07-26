@@ -1,6 +1,6 @@
 from typing import Any, Generic, TypeVar
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database.base import Base
@@ -32,6 +32,12 @@ class BaseRepository(Generic[ModelT]):
                     query = query.where(column == value)
         query = query.offset(skip).limit(limit)
         return list(self.db.scalars(query).all())
+
+    def count_where(self, *criteria: Any) -> int:
+        query = select(func.count()).select_from(self.model)
+        if criteria:
+            query = query.where(*criteria)
+        return self.db.scalar(query) or 0
 
     def update(self, id: int, **kwargs: Any) -> ModelT | None:
         instance = self.get(id)

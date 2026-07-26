@@ -30,6 +30,10 @@ class Settings(BaseSettings):
 
     match_score_threshold: float = 0.6
 
+    # Fuso usado como fallback quando o cliente não manda `tz`. Só afeta a
+    # fronteira de calendário do período "hoje" — janelas móveis (7d/30d) não usam.
+    app_timezone: str = "America/Sao_Paulo"
+
     # Validação dos candidatos do matcher por LLM (via LangChain + OpenRouter).
     # Sem openrouter_api_key, a validação fica desativada (comportamento atual).
     openrouter_api_key: str | None = None

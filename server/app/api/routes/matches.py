@@ -1,83 +1,73 @@
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import desc, select
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import MatchNotFoundError
 from app.database.session import get_db
-from app.models.product_interest import ProductInterest
-from app.models.promotion_match import PromotionMatch
-from app.models.telegram_message import TelegramMessage
-from app.schemas.match import MatchDetailResponse
+from app.repositories.interest_repo import InterestRepository
+from app.repositories.match_repo import MatchRepository
+from app.schemas.match import (
+    MatchBulkReadResponse,
+    MatchChatResponse,
+    MatchFilterParams,
+    MatchListQuery,
+    MatchListResponse,
+    MatchReadResponse,
+    MatchStatsResponse,
+)
+from app.services.match_service import MatchService
 
 router = APIRouter(prefix="/matches", tags=["Matches"])
 
 
-@router.get("", response_model=list[MatchDetailResponse])
+def get_service(db: Session = Depends(get_db)) -> MatchService:
+    return MatchService(MatchRepository(db), InterestRepository(db))
+
+
+@router.get("", response_model=MatchListResponse)
 def list_matches(
-    interest_id: int | None = Query(None),
-    alerted: bool | None = Query(None),
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db),
+    query: Annotated[MatchListQuery, Query()],
+    service: MatchService = Depends(get_service),
 ):
-    query = (
-        select(
-            PromotionMatch,
-            TelegramMessage.chat_name,
-            TelegramMessage.text,
-            ProductInterest.nome_produto,
-        )
-        .join(TelegramMessage, PromotionMatch.message_id == TelegramMessage.id)
-        .join(ProductInterest, PromotionMatch.interest_id == ProductInterest.id)
-        .order_by(desc(PromotionMatch.created_at))
-    )
+    return service.list(query, skip=query.skip, limit=query.limit)
 
-    if interest_id is not None:
-        query = query.where(PromotionMatch.interest_id == interest_id)
-    if alerted is not None:
-        query = query.where(PromotionMatch.alerted == alerted)
 
-    query = query.offset(skip).limit(limit)
-    rows = db.execute(query).all()
+# As rotas literais vêm antes de qualquer /{match_id} — aqui a contagem de
+# segmentos já as distingue, mas manter a ordem evita surpresa se um
+# GET /matches/{id} for adicionado depois.
+@router.get("/stats", response_model=MatchStatsResponse)
+def match_stats(
+    tz: str | None = Query(None),
+    service: MatchService = Depends(get_service),
+):
+    return service.stats(tz)
 
-    results = []
-    for match, chat_name, text, nome_produto in rows:
-        chat_id = None
-        message_id = None
-        for m2 in db.query(TelegramMessage).filter(TelegramMessage.id == match.message_id):
-            chat_id = m2.chat_id
-            message_id = m2.message_id
-            break
 
-        link = ""
-        if chat_id and message_id:
-            chat_str = str(chat_id)
-            if chat_str.startswith("-100"):
-                chat_str = chat_str[4:]
-            elif chat_str.startswith("-"):
-                chat_str = chat_str[1:]
-            link = f"https://t.me/c/{chat_str}/{message_id}"
+@router.get("/chats", response_model=list[MatchChatResponse])
+def match_chats(service: MatchService = Depends(get_service)):
+    return service.chats()
 
-        results.append(
-            MatchDetailResponse(
-                id=match.id,
-                message_id=match.message_id,
-                interest_id=match.interest_id,
-                preco_encontrado=match.preco_encontrado,
-                score=match.score,
-                raw_text_snippet=match.raw_text_snippet,
-                matched_keyword=match.matched_keyword,
-                llm_motivo=match.llm_motivo,
-                llm_aprovado=match.llm_aprovado,
-                llm_validado=match.llm_validado,
-                preco_ok=match.preco_ok,
-                alerted=match.alerted,
-                alerted_at=match.alerted_at,
-                created_at=match.created_at,
-                chat_name=chat_name,
-                message_text=text,
-                message_link=link,
-                produto_nome=nome_produto,
-            )
-        )
 
-    return results
+@router.post("/read-all", response_model=MatchBulkReadResponse)
+def mark_all_read(
+    filters: MatchFilterParams,
+    service: MatchService = Depends(get_service),
+):
+    return MatchBulkReadResponse(updated=service.mark_all_read(filters))
+
+
+@router.post("/{match_id}/read", response_model=MatchReadResponse)
+def mark_read(match_id: int, service: MatchService = Depends(get_service)):
+    try:
+        return service.set_lido(match_id, True)
+    except MatchNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/{match_id}/unread", response_model=MatchReadResponse)
+def mark_unread(match_id: int, service: MatchService = Depends(get_service)):
+    try:
+        return service.set_lido(match_id, False)
+    except MatchNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
