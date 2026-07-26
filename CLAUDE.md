@@ -6,7 +6,7 @@ A more detailed companion document lives in `AGENTS.md` (API table, Docker notes
 
 ## What this is
 
-A Telegram promotion monitor. The backend joins Telegram groups via a Telethon user-session, scores every incoming message against user-defined product "interests", and records matches. The frontend is a dashboard to manage interests and browse messages/matches.
+A Telegram promotion monitor. The backend joins Telegram groups via a Telethon user-session, scores every incoming message against user-defined product "interests", and records matches. The frontend is a dashboard to manage interests and browse the matched promotions — `/` is the matches feed, with per-match read/unread state.
 
 ## Commands
 
@@ -59,6 +59,12 @@ docker attach promo-monitor-backend  # first run only: type the Telegram code, t
 6. Candidates that clear the threshold and price gate are re-checked by `app/services/llm_validator_service.py` (`LLMValidator`, LangChain + OpenRouter, model `LLM_MODEL`). It is **fail-open**: with no `OPENROUTER_API_KEY`, `llm_validation_enabled=False`, or on error it approves. Rejected candidates are **still stored** as a `PromotionMatch` (`llm_aprovado=False`, for audit) but do **not** trigger an alert.
 7. Approved matches call `alert_service.send_alert`, which pushes a Telegram message via the **bot client** to the configured `alert_target` chat.
 
+### Reading the feed (`app/services/match_service.py`)
+- `promotion_matches.lido` / `lido_em` hold per-match read state. `GET /matches` returns an envelope `{items, total, has_more}` and takes filters for period, status, chat, price range and ordering; `POST /matches/read-all` takes **the same filter model as its body**, so bulk-read provably covers exactly what the list shows. `MatchRepository._where_clauses` is the single source of the WHERE for list, count and bulk-update.
+- Ordering always appends `desc(PromotionMatch.id)` as a tiebreaker. `preco_encontrado` is nullable and `score` clusters at 1.0 — without it, offset pagination repeats and skips rows across pages.
+- **Timezones are load-bearing here.** `DateTime(timezone=True)` columns store *naive UTC*: SQLite's bind processor serializes the wall-clock fields and drops tzinfo without converting first. Every boundary is normalized through `app/core/timeutils.py` (`utcnow_naive`, `resolve_timezone`). `hoje` is a calendar boundary in the user's tz (`?tz=`, falling back to `APP_TIMEZONE`, default `America/Sao_Paulo`); `7d`/`30d` are rolling windows. A bare `datetime.now()` in this code is a 3-hour bug in Brazil.
+- `alertState` ('sent'/'failed'/'skipped') is derived **client-side** in `web/src/lib/match.ts` from `alerted`/`preco_ok`/`llm_aprovado`. `failed` is an inference ("approved but not alerted"), not a recorded fact — it can't distinguish "no target configured" from "bot offline" from "send raised". Making it truthful would mean new columns on `promotion_matches`.
+
 ### Telegram: two clients
 - **User session** (`get_client`, `TELEGRAM_PHONE`): the listener that reads groups/channels. First run blocks on `input()` for the login code.
 - **Bot** (`get_bot_client`, `TELEGRAM_BOT_TOKEN`, optional): sends the alerts. Its `/start` handler saves the sender's chat as `app_config.alert_target` (one-click alert setup — see the frontend `BotSetupGuide`); `/id` echoes the chat id. Without `TELEGRAM_BOT_TOKEN` the bot is skipped and no alerts are sent.
@@ -68,10 +74,16 @@ Strict layered architecture — respect these boundaries when adding features:
 `api/routes` → `services` (business logic) → `repositories` (data access, `BaseRepository[T]` generic) → `models` (SQLAlchemy ORM). `schemas` are Pydantic request/response DTOs; `core` holds `Settings` (pydantic-settings), structlog setup, and exceptions.
 
 - **SQLite** via SQLAlchemy. `app/database/session.py` enables WAL mode + foreign keys through a `@event.listens_for` connect hook.
+- **Adding a column**: add the `mapped_column` to the model *and* an entry to `_COLUMN_MIGRATIONS` with SQLite DDL (a `NOT NULL` column needs a literal `DEFAULT`). `ensure_columns()` tracks which columns it just created and can run a guarded one-shot backfill off that — that's how pre-existing matches were marked `lido=1` so the unread counter didn't start with the whole table in it. Keep its return type `None`; `app/main.py` calls it for effect.
 - **Portuguese domain names** throughout models/schemas/routes: `nome_produto`, `preco_maximo`, `palavras_chave`, `palavras_excluidas`, `ativo`. Keep new domain fields in Portuguese to match.
 - `data/` and `session/` dirs are created at runtime by `Settings.model_post_init` and are gitignored.
 
 ### Frontend
 - **React 19 + Vite + TypeScript**, **TanStack Router** (file-based routing — `routeTree.gen.ts` is auto-generated, do not edit by hand), **TanStack Query** for server state (hooks in `src/hooks/`).
-- **Tailwind CSS v4** via `@tailwindcss/vite`, **shadcn/ui** components in `src/components/ui/`. Path alias `@/` → `src/`.
+- **Tailwind CSS v4** via `@tailwindcss/vite`, **shadcn/ui** in `src/components/ui/` (`base-nova` style, **base-ui** primitives under the hood — not Radix). Path alias `@/` → `src/`.
 - API client in `src/lib/api.ts` (base URL from `VITE_API_URL`, falls back to `http://localhost:3333`); types in `src/types/`. CORS on the backend is open to all origins (`allow_origins=["*"]`).
+- `/` is the matches feed; `/matches` only redirects to it. `MatchTable` (desktop) and `MatchCard` (mobile) are separate components on purpose — shared logic lives in `src/lib/match.ts`, the duplication is layout-only.
+- **No SSE/websockets.** Freshness comes from polling: `useMatchesInfinite` polls every 30s *only on page 1* (a background refetch with N pages loaded re-fetches all of them against a shifted offset window, duplicating/dropping rows), while `/matches/stats` polls unconditionally so the unread badge stays live either way. `useMarkRead` patches optimistically and invalidates **only** `['matches','stats']` — invalidating the list would refetch every loaded page and throw away the scroll position.
+- Responsive gotchas worth not re-breaking: the flex container in `__root.tsx` needs `min-w-0` (otherwise `flex-1`'s `min-width:auto` stops the tables' `overflow-x-auto` from ever engaging, and the page scrolls horizontally); a `max-w-*` at a `DialogContent` call-site overrides its mobile clamp via `tailwind-merge`, so pair it (`max-w-[calc(100%-2rem)] sm:max-w-lg`).
+- base-ui `Select` differs from Radix: pass `items` to `Select.Root` or `SelectValue` renders the raw value instead of the label, and `<SelectItem value="">` silently shadows the placeholder instead of throwing — use a sentinel (`'todos'`) mapped to `undefined`.
+- The `.dark` class is applied on `<html>` in `index.html`; shadcn tokens resolve to the dark palette. Existing components still hardcode `zinc-*`, which is fine — just don't assume the token palette is light.
