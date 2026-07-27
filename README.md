@@ -64,7 +64,7 @@ A raiz do projeto tem um `docker-compose.yml` que sobe a aplicação inteira em 
 
 | Serviço | Container | Imagem | Porta no host |
 |---------|-----------|--------|---------------|
-| `backend` | `promo-monitor-backend` | FastAPI/Telethon (uvicorn) | `API_PORT` (3333) |
+| `backend` | `promo-monitor-server` | FastAPI/Telethon (uvicorn) | `API_PORT` (3333) |
 | `web` | `promo-monitor-web` | SPA buildada servida por nginx | `WEB_PORT` (8080) |
 
 O navegador acessa o painel em `web` e chama a API do `backend` diretamente — por isso a URL

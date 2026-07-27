@@ -32,7 +32,7 @@ pnpm lint         # eslint
 `pnpm` is the package manager (`pnpm-lock.yaml` is committed).
 
 ### Docker (both services)
-The root `docker-compose.yml` builds and runs both services: `promo-monitor-backend`
+The root `docker-compose.yml` builds and runs both services: `promo-monitor-server`
 (uvicorn on `API_PORT`) and `promo-monitor-web` (nginx serving the built SPA on `WEB_PORT`).
 ```bash
 cp .env.example .env                 # VITE_API_URL (build-time), API_PORT, WEB_PORT

@@ -90,7 +90,7 @@ docker compose up --build
 ```
 
 > O `docker-compose.yml` fica na **raiz** do repositório e o container do backend se chama
-> `promo-monitor-backend`. Não é mais preciso `stdin_open`/`tty` nem `docker attach`: o
+> `promo-monitor-server`. Não é mais preciso `stdin_open`/`tty` nem `docker attach`: o
 > código de verificação é digitado no painel web.
 
 ## Endpoints da API

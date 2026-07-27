@@ -90,7 +90,7 @@ pnpm dev
 ## Docker
 
 O `docker-compose.yml` fica na **raiz** do repositório (não em `server/`) e sobe
-os dois serviços (`promo-monitor-backend`, `promo-monitor-web`):
+os dois serviços (`promo-monitor-server`, `promo-monitor-web`):
 
 ```bash
 cp .env.example .env                 # VITE_API_URL (build-time), API_PORT, WEB_PORT
