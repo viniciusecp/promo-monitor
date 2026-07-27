@@ -137,7 +137,7 @@ class TelegramAuthenticator:
             status=self._status,
             connected=client.is_connected(),
             phone_masked=mask_phone(settings.telegram_phone),
-            user_id=getattr(self._me, "id", None),
+            user_id=self.user_id,
             username=getattr(self._me, "username", None),
             first_name=getattr(self._me, "first_name", None),
             error_code=code,
@@ -149,6 +149,16 @@ class TelegramAuthenticator:
     @property
     def is_authenticated(self) -> bool:
         return self._status == "authenticated"
+
+    @property
+    def user_id(self) -> int | None:
+        """Id da conta logada, ou `None` enquanto não houver login.
+
+        É o que o handler `/start` do bot usa para decidir quem pode apontar o
+        destino dos alertas. Sai de `_me`, em memória — sem RPC, porque roda no
+        caminho de cada mensagem recebida pelo bot.
+        """
+        return getattr(self._me, "id", None)
 
     # ------------------------------------------------------------------ escrita
 

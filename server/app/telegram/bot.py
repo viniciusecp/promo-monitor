@@ -23,6 +23,7 @@ from telethon.events import NewMessage
 from app.core.logging import logger
 from app.core.masking import mask_token
 from app.repositories.app_config_repo import AppConfigRepository
+from app.telegram.auth import authenticator
 from app.telegram.client import get_bot_client, reset_bot_client
 
 
@@ -137,6 +138,38 @@ class BotManager:
 
     def _register_handlers(self, client: TelegramClient, session_factory) -> None:
         async def _on_start(event: NewMessage.Event) -> None:
+            # O username de um bot é público e pesquisável, e `alert_target` é
+            # um campo só. Sem esta checagem, um `/start` de qualquer estranho
+            # *sequestraria* o destino: ele passaria a receber as promoções e o
+            # dono pararia de receber, em silêncio. Quem autoriza é o remetente,
+            # não o chat — mandar `/start` de dentro de um grupo continua
+            # apontando o alerta para o grupo.
+            owner_id = authenticator.user_id
+            sender_id = event.sender_id
+
+            if owner_id is None:
+                # Fecha em vez de abrir. Esta janela existe de verdade: o token
+                # é salvo pelo painel, que não exige login, então o bot pode
+                # estar no ar antes de a conta de usuário ter sido conectada —
+                # e é justamente aí que não há com quem comparar.
+                await event.respond(
+                    "⚠️ Conecte a sua conta do Telegram no painel antes de ativar "
+                    "as notificações."
+                )
+                logger.warning("bot_target_denied_no_owner", sender_id=sender_id)
+                return
+
+            if sender_id != owner_id:
+                # Resposta neutra de propósito: não confirma para o estranho que
+                # ele achou o bot certo nem revela nada do dono.
+                await event.respond("Este bot é privado.")
+                logger.warning(
+                    "bot_target_denied",
+                    sender_id=sender_id,
+                    chat_id=event.chat_id,
+                )
+                return
+
             chat_id = event.chat_id
             db = session_factory()
             try:
