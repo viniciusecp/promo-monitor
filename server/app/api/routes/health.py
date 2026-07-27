@@ -15,7 +15,7 @@ _start_time = time.time()
 @router.get("/health")
 async def health():
     connected = await is_connected()
-    # Tudo aqui sai de snapshot em memória — este endpoint é polado a cada 15s
+    # Tudo aqui sai de snapshot em memória — este endpoint é polado a cada 30s
     # pelo frontend e não pode custar um round-trip ao Telegram.
     return {
         "status": "ok",

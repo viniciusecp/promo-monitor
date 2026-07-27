@@ -120,7 +120,7 @@ dela para a internet.
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/health` | `status`, `telegram_connected`, `telegram_authenticated`, `worker_running`, `bot_connected`, `uptime_seconds` — tudo de snapshot em memória (polado a cada 15s) |
+| GET | `/health` | `status`, `telegram_connected`, `telegram_authenticated`, `worker_running`, `bot_connected`, `uptime_seconds` — tudo de snapshot em memória (polado a cada 30s) |
 | GET | `/telegram/auth/status` | estado do login: `status`, `phone_masked`, `connected`, `worker_running`, `user`, `error_code`, `retry_after_seconds`, `can_request_code` |
 | POST | `/telegram/auth/request-code` | envia o código para `TELEGRAM_PHONE`. 429 + `Retry-After` no FloodWait |
 | POST | `/telegram/auth/code` | `{code}` → 400 `code_invalid` / `code_expired`, 409 `wrong_state`/`auth_busy` |
