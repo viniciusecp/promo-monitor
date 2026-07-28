@@ -15,6 +15,7 @@ export {
   useMarkAllRead,
 } from './useMatches'
 export { useMessages } from './useMessages'
+export { useSidebarCollapsed } from './useSidebarCollapsed'
 export { useSettings, useUpdateSettings, useTestAlert } from './useSettings'
 export {
   useAuthStatus,

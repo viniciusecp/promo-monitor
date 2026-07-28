@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Sidebar, MobileNav } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { useAuthStatus } from '@/hooks/useTelegramAuth'
+import { useSidebarCollapsed } from '@/hooks/useSidebarCollapsed'
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -23,6 +24,7 @@ const SHELL = 'flex min-h-screen bg-zinc-900 text-zinc-100'
 
 function RootLayout() {
   const [navOpen, setNavOpen] = useState(false)
+  const { collapsed, toggle } = useSidebarCollapsed()
   const router = useRouter()
   const { pathname } = useLocation()
 
@@ -95,13 +97,18 @@ function RootLayout() {
 
   return (
     <div className={SHELL}>
-      <Sidebar />
+      <Sidebar collapsed={collapsed} onToggle={toggle} />
       <MobileNav open={navOpen} onOpenChange={setNavOpen} />
 
       {/* min-w-0 é obrigatório: `flex-1` deixa min-width:auto, e aí o
           overflow-x-auto interno das tabelas nunca ativa — elas empurram o
-          container além da viewport em vez de rolar sozinhas. */}
-      <div className="flex min-w-0 flex-1 flex-col md:ml-60">
+          container além da viewport em vez de rolar sozinhas.
+          A margem acompanha a largura da sidebar (fixed, fora do fluxo). */}
+      <div
+        className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ${
+          collapsed ? 'md:ml-16' : 'md:ml-60'
+        }`}
+      >
         <Header onMenuClick={() => setNavOpen(true)} />
         <main className="flex-1 p-4 md:p-6">
           <Outlet />
