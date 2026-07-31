@@ -18,7 +18,6 @@ import type {
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone
 const PAGE_SIZE = 30
 
-/** Chave-família: invalidar ['matches'] atinge lista, stats e chats de uma vez. */
 const matchKeys = {
   all: ['matches'] as const,
   list: (filters: MatchFilters) => ['matches', 'list', filters] as const,
@@ -43,7 +42,6 @@ function buildMatchQuery(filters: MatchFilters, skip: number, limit: number) {
   return p.toString()
 }
 
-/** Body do read-all: os mesmos filtros, sem o que é irrelevante a um update. */
 function toReadAllBody(filters: MatchFilters) {
   return {
     periodo: filters.periodo,
@@ -66,16 +64,6 @@ export function useMatchesInfinite(filters: MatchFilters) {
       ),
     getNextPageParam: (last, all) =>
       last.has_more ? all.reduce((n, p) => n + p.items.length, 0) : undefined,
-    // Sem polling em intervalo: a lista só se atualiza sozinha quando o usuário
-    // volta para a aba (o refetch de foco do TanStack Query escuta
-    // `visibilitychange`), respeitando o `staleTime` global — alternar de aba
-    // por 2s não dispara request.
-    //
-    // A guarda de página continua valendo: com paginação por offset, um refetch
-    // com N páginas carregadas re-busca TODAS elas; se chegou match novo no
-    // topo, as fronteiras deslocam e as linhas duplicam ou somem. A partir da
-    // página 2 o `LastUpdated` envelhece à vista e o botão de atualizar é a
-    // saída manual.
     refetchOnWindowFocus: (query) => (query.state.data?.pages.length ?? 1) === 1,
   })
 }
@@ -87,9 +75,6 @@ export function useMatchStats() {
       api.get<MatchStatsResponse>(
         `/matches/stats?tz=${encodeURIComponent(TZ)}`,
       ),
-    // Mesma regra da lista: atualiza quando o usuário volta para a aba, não em
-    // intervalo. Sem guarda de página aqui — stats é uma request só, sempre
-    // segura de refazer. (É o default do v5; explícito porque é uma decisão.)
     refetchOnWindowFocus: true,
   })
 }
@@ -143,9 +128,6 @@ export function useMarkRead() {
       toast.error('Não foi possível atualizar o estado de leitura.')
     },
 
-    // Reconcilia só o badge. Invalidar a lista re-buscaria todas as páginas
-    // carregadas e jogaria o scroll do usuário fora — o patch otimista acima
-    // já deixou a lista correta.
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['matches', 'stats'] })
     },
@@ -164,7 +146,6 @@ export function useMarkAllRead() {
           ? 'Nenhum match não lido no filtro atual.'
           : `${res.updated} match(es) marcado(s) como lido(s).`,
       )
-      // Aqui o reset total é o comportamento esperado.
       qc.invalidateQueries({ queryKey: matchKeys.all })
     },
     onError: () => toast.error('Não foi possível marcar todos como lidos.'),

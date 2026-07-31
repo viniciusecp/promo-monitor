@@ -1,5 +1,3 @@
-# Adiado porque o método `list` sombreia o builtin `list` dentro do corpo da
-# classe, quebrando anotações como `list[MatchChatResponse]`.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone

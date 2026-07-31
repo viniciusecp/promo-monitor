@@ -1,16 +1,4 @@
-"""Supervisor do pipeline de captura — idempotente e religável em runtime.
-
-Antes essa montagem vivia inline em `run_telegram_worker()` e terminava num
-`await client.run_until_disconnected()`, o que amarrava o pipeline ao boot: não
-dava para subir depois de um login pela web. Aqui `ensure_started()` é uma
-rotina de setup que **retorna**, e por isso pode ser chamada de dentro de um
-handler HTTP.
-
-Trocar o `run_until_disconnected()` é seguro porque quem despacha os eventos são
-as tasks internas que o Telethon cria no `connect()`. O que ele cobria de fato —
-perceber que a conexão caiu — passou para o `_watchdog_loop`, que ainda por cima
-detecta sessão revogada de outro aparelho, coisa que antes falhava em silêncio.
-"""
+"""Supervisor do pipeline de captura — idempotente e religável em runtime."""
 
 from __future__ import annotations
 
@@ -33,8 +21,6 @@ from app.telegram.listener import MessageListener
 
 _REFRESH_INTERVAL = 60
 _WATCHDOG_INTERVAL = 30
-# A cada quantos ticks do watchdog vale a pena gastar um RPC checando se a
-# sessão continua autorizada (~5 min).
 _AUTH_CHECK_EVERY = 10
 
 
@@ -99,9 +85,6 @@ class WorkerSupervisor:
     # ------------------------------------------------------------------ internos
 
     async def _build(self, client) -> None:
-        # A sessão vive junto do supervisor e só fecha em `_teardown`. Fechá-la
-        # num `finally` (como no worker antigo) deixaria todos os repositórios
-        # segurando uma sessão morta assim que esta função retornasse.
         self._db = SessionLocal()
 
         interest_repo = InterestRepository(self._db)
@@ -110,7 +93,6 @@ class WorkerSupervisor:
         interests = interest_repo.list_active()
         self._interests_count = len(interests)
 
-        # Um token de bot ruim não pode impedir a captura de mensagens de subir.
         try:
             await bot_manager.ensure_started(SessionLocal)
         except Exception as e:
@@ -134,9 +116,7 @@ class WorkerSupervisor:
         )
         await self._listener.start()
 
-        # Tasks guardadas: sem a referência, um segundo `ensure_started()`
-        # deixaria dois loops de refresh disputando o mesmo message_service.
-        self._refresh_task = asyncio.create_task(
+        self._listener = MessageListener(
             self._refresh_loop(), name="refresh_interests"
         )
         self._watchdog_task = asyncio.create_task(
@@ -167,7 +147,6 @@ class WorkerSupervisor:
             self._db = None
 
     async def _refresh_loop(self) -> None:
-        """Recarrega os interesses ativos para que edições valham sem restart."""
         while True:
             await asyncio.sleep(_REFRESH_INTERVAL)
             try:
@@ -183,7 +162,6 @@ class WorkerSupervisor:
             except asyncio.CancelledError:
                 raise
             except Exception as e:
-                # Um tick ruim (banco travado, por exemplo) não pode matar o loop.
                 logger.error("interests_refresh_failed", error=str(e), exc_info=True)
 
     async def _watchdog_loop(self) -> None:
@@ -202,8 +180,6 @@ class WorkerSupervisor:
                     if not await client.is_user_authorized():
                         logger.warning("telegram_session_revoked")
                         authenticator.mark_session_revoked()
-                        # Fora do lock: `stop()` o adquire, e este loop é
-                        # cancelado lá dentro.
                         asyncio.create_task(self.stop(), name="worker_stop_revoked")
                         return
             except asyncio.CancelledError:

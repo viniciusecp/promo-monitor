@@ -9,7 +9,6 @@ import type { InterestResponse } from '@/types'
 interface InterestFormData {
   nome_produto: string
   preco_maximo: string
-  limiar_match: string
   palavras_chave: string
   palavras_excluidas: string
   ativo: boolean
@@ -20,7 +19,6 @@ interface Props {
   onSubmit: (data: {
     nome_produto: string
     preco_maximo: number | null
-    limiar_match: number | null
     palavras_chave: string[]
     palavras_excluidas: string[]
     ativo: boolean
@@ -33,7 +31,6 @@ export function InterestForm({ defaultValues, onSubmit, isPending, submitLabel }
   const [data, setData] = useState<InterestFormData>({
     nome_produto: defaultValues?.nome_produto ?? '',
     preco_maximo: defaultValues?.preco_maximo?.toString() ?? '',
-    limiar_match: defaultValues?.limiar_match?.toString() ?? '',
     palavras_chave: defaultValues?.palavras_chave.join('\n') ?? '',
     palavras_excluidas: defaultValues?.palavras_excluidas.join('\n') ?? '',
     ativo: defaultValues?.ativo ?? true,
@@ -44,7 +41,6 @@ export function InterestForm({ defaultValues, onSubmit, isPending, submitLabel }
     onSubmit({
       nome_produto: data.nome_produto,
       preco_maximo: data.preco_maximo ? Number(data.preco_maximo) : null,
-      limiar_match: data.limiar_match ? Number(data.limiar_match) : null,
       palavras_chave: data.palavras_chave
         .split('\n')
         .map((s) => s.trim())
@@ -80,20 +76,6 @@ export function InterestForm({ defaultValues, onSubmit, isPending, submitLabel }
           value={data.preco_maximo}
           onChange={(e) => setData({ ...data, preco_maximo: e.target.value })}
           placeholder="Ex: 2500.00"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="limiar_match">Limiar de match (0–1, opcional)</Label>
-        <Input
-          id="limiar_match"
-          type="number"
-          step="0.05"
-          min="0"
-          max="1"
-          value={data.limiar_match}
-          onChange={(e) => setData({ ...data, limiar_match: e.target.value })}
-          placeholder="Padrão: 0.6 (global)"
         />
       </div>
 

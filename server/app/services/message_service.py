@@ -2,7 +2,6 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 
-from app.core.config import settings
 from app.core.links import build_message_link
 from app.core.logging import logger
 from app.models.product_interest import ProductInterest
@@ -67,8 +66,6 @@ class MessageService:
         if not text:
             return
 
-        # Antes do loop de interesses para não gastar chamadas de LLM reprocessando
-        # uma mensagem já vista.
         if self.message_repo.exists_by_telegram_id(message_id, chat_id):
             return
 
@@ -79,16 +76,13 @@ class MessageService:
 
             score, prices, breakdown, matched_keyword = composite_matcher.match(text, interest)
 
-            threshold = interest.limiar_match or settings.match_score_threshold
-            if score < threshold:
+            if score < 0.6:
                 continue
 
             preco = min(prices) if prices else None
             preco_ok = not (interest.preco_maximo and preco and preco > interest.preco_maximo)
 
             if not preco_ok:
-                # Acima do preço: guarda para auditoria mas não chama a LLM (só vale
-                # o custo quando pode virar alerta).
                 logger.debug(
                     "price_above_max",
                     produto=interest.nome_produto,

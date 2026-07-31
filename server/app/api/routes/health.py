@@ -7,16 +7,21 @@ from app.telegram.bot import bot_manager
 from app.telegram.client import is_connected
 from app.workers.supervisor import supervisor
 
+public_router = APIRouter(tags=["Health"])
 router = APIRouter(tags=["Health"])
 
 _start_time = time.time()
 
 
+@public_router.get("/healthz")
+async def healthz():
+    """Liveness para o HEALTHCHECK do container, que roda sem cookie."""
+    return {"status": "ok"}
+
+
 @router.get("/health")
 async def health():
     connected = await is_connected()
-    # Tudo aqui sai de snapshot em memória — este endpoint é polado a cada 30s
-    # pelo frontend e não pode custar um round-trip ao Telegram.
     return {
         "status": "ok",
         "telegram_connected": connected,

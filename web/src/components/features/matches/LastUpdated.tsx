@@ -16,26 +16,10 @@ function formatAgo(ms: number) {
   return `há ${h}h`
 }
 
-/**
- * Mostra quando os dados da lista foram buscados pela última vez.
- *
- * Usa deliberadamente o timestamp da *lista*, e não o de /matches/stats: a
- * lista só se atualiza sozinha quando o usuário volta para a aba, e nem isso a
- * partir da página 2 — então é aqui que o "há X min" precisa envelhecer à
- * vista, junto com o botão de atualizar, que é a saída manual. Mostrar o
- * timestamp do stats (que refaz o fetch sempre no foco) diria "agora mesmo"
- * com a lista parada.
- *
- * Chamar useMatchesInfinite aqui não dispara request extra: mesma queryKey do
- * MatchFeed, mesma entrada de cache.
- */
 export function LastUpdated({ filters }: { filters: MatchFilters }) {
   const qc = useQueryClient()
   const { dataUpdatedAt, isFetching } = useMatchesInfinite(filters)
 
-  // O "agora" vive no state em vez de ser lido no render: Date.now() no corpo
-  // do componente é leitura impura, e o texto relativo precisa envelhecer
-  // sozinho de qualquer forma.
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {

@@ -1,24 +1,4 @@
-"""Máquina de estados da autenticação do Telegram, dirigida por HTTP.
-
-Antes o login acontecia com dois `input()` dentro do event loop do FastAPI — o
-que travava a API inteira e obrigava um `docker attach` na primeira subida.
-Aqui o mesmo fluxo vira estado explícito em memória: as rotas em
-`app/api/routes/telegram_auth.py` empurram as transições e o frontend observa
-`snapshot()` por polling.
-
-Duas regras não negociáveis:
-
-- **Nunca `client.start()` e nunca `input()`.** O `start()` do Telethon também
-  faz prompt no stdin quando a sessão não está autorizada; só `connect()` é
-  seguro aqui.
-- **Nunca mandar código sozinho no boot.** Com `restart: on-failure:5` no
-  compose, um reenvio automático queimaria um código por restart e levaria a um
-  `FloodWaitError` de horas. Código só sai de um POST explícito.
-
-O `phone_code_hash` não é guardado aqui de propósito: o Telethon o cacheia em
-`client._phone_code_hash[phone]` e o `sign_in` o resolve sozinho. Guardar uma
-segunda cópia só criaria uma chance de dessincronizar.
-"""
+"""Máquina de estados da autenticação do Telegram, dirigida por HTTP."""
 
 from __future__ import annotations
 
@@ -74,8 +54,6 @@ class AuthSnapshot:
     code_sent_at: datetime | None = None
 
 
-# Exceção do Telethon -> (código estável da API, status resultante, mensagem pt-BR).
-# `None` no status significa "mantém o estado atual".
 _ERROR_MAP: dict[type[Exception], tuple[str, AuthStatus | None, str]] = {
     PhoneCodeInvalidError: (
         "code_invalid",
@@ -87,9 +65,6 @@ _ERROR_MAP: dict[type[Exception], tuple[str, AuthStatus | None, str]] = {
         "awaiting_code",
         "Código vazio. Digite o código que o Telegram enviou.",
     ),
-    # Ao expirar, o Telethon descarta o phone_code_hash. Sem voltar para
-    # `unauthenticated`, a próxima tentativa levantaria um ValueError opaco
-    # ("You also need to provide a phone_code_hash") em vez de um erro tratável.
     PhoneCodeExpiredError: (
         "code_expired",
         "unauthenticated",
@@ -126,8 +101,6 @@ class TelegramAuthenticator:
         self._me = None
         self._code_sent_at: datetime | None = None
 
-    # ------------------------------------------------------------------ leitura
-
     def snapshot(self) -> AuthSnapshot:
         """Estado atual sem nenhum round-trip. É polado a cada 3s pelo frontend
         e usado pelo `/health` — não pode fazer RPC nem pegar o lock."""
@@ -159,8 +132,6 @@ class TelegramAuthenticator:
         caminho de cada mensagem recebida pelo bot.
         """
         return getattr(self._me, "id", None)
-
-    # ------------------------------------------------------------------ escrita
 
     async def bootstrap(self) -> AuthSnapshot:
         """Conecta e descobre se a sessão salva ainda vale. Não envia código."""
@@ -233,8 +204,6 @@ class TelegramAuthenticator:
                     await client.log_out()
             except Exception as e:
                 logger.warning("telegram_logout_failed", error=str(e))
-            # Depois do log_out a sessão do objeto está morta; descartar o
-            # singleton para que o próximo login construa um cliente novo.
             await reset_client(delete_session=True)
             self._status = "unauthenticated"
             self._error = None
@@ -252,8 +221,6 @@ class TelegramAuthenticator:
             "A sessão foi encerrada pelo Telegram. Entre de novo.",
             None,
         )
-
-    # ------------------------------------------------------------------ internos
 
     def _guard(self):
         """Lock com falha rápida — nunca enfileira uma segunda operação."""
@@ -288,8 +255,6 @@ class TelegramAuthenticator:
         )
 
     def _handle_error(self, exc: Exception) -> None:
-        """Traduz a exceção do Telethon, atualiza o estado e levanta
-        `TelegramAuthError`. Nunca retorna."""
         if isinstance(exc, FloodWaitError):
             seconds = int(getattr(exc, "seconds", 0) or 0)
             self._error = (

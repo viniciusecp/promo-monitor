@@ -1,12 +1,4 @@
-"""Rotina de boot do Telegram.
-
-Conecta e, se a sessão salva ainda valer, sobe o pipeline como antes. Se não
-valer, **não faz nada** e apenas registra que falta login: o usuário resolve
-pelo painel (`/login` → `POST /telegram/auth/request-code`). Nada de `input()`,
-nada de bloquear o event loop, e nada de mandar código sozinho — com
-`restart: on-failure:5` no compose isso queimaria um código por restart até cair
-num FloodWait de horas.
-"""
+"""Rotina de boot do Telegram."""
 
 import asyncio
 
@@ -26,7 +18,6 @@ async def run_telegram_worker() -> None:
             snapshot = await authenticator.bootstrap()
             break
         except Exception as e:
-            # Em Docker a rede pode não estar pronta na primeira tentativa.
             if attempt == _CONNECT_ATTEMPTS:
                 logger.error(
                     "telegram_boot_failed",

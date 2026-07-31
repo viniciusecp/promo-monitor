@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Sidebar, MobileNav } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { useAuthStatus } from '@/hooks/useTelegramAuth'
+import { useSession } from '@/hooks/useSession'
 import { useSidebarCollapsed } from '@/hooks/useSidebarCollapsed'
 
 export const Route = createRootRoute({
@@ -21,6 +22,14 @@ export const Route = createRootRoute({
 })
 
 const SHELL = 'flex min-h-screen bg-zinc-900 text-zinc-100'
+
+/** Rotas que se desenham sozinhas, fora do shell com sidebar. */
+const BARE_ROUTES = ['/login']
+
+/** `/settings` entra aqui porque é de onde se administra usuários e se corrige
+ *  o token do bot — prender o dono na tela de conexão o deixaria sem fazer as
+ *  duas coisas justamente quando algo quebrou. */
+const SEM_TELEGRAM_OK = ['/telegram', '/trocar-senha', '/settings']
 
 function RootLayout() {
   const [navOpen, setNavOpen] = useState(false)
@@ -39,10 +48,24 @@ function RootLayout() {
   // O gate fica no componente, não em `beforeLoad`: um guard assíncrono no
   // router bloquearia toda navegação numa chamada de rede e não dá para
   // invalidar a partir das mutações de login.
-  const { data: auth, isLoading, isError, refetch } = useAuthStatus()
-  const onLogin = pathname === '/login'
+  //
+  // Dois estágios nesta ordem: sessão do painel, depois conexão do Telegram —
+  // um anônimo não pode nem saber se o Telegram está conectado.
+  const {
+    data: user,
+    isLoading: sessionLoading,
+    isError: sessionError,
+    refetch: refetchSession,
+  } = useSession()
 
-  if (isLoading) {
+  const onLogin = pathname === '/login'
+  const logado = Boolean(user)
+
+  // `enabled`: a rota exige sessão, e sem isso a tela de login dispararia um
+  // 401 a cada 3s.
+  const { data: auth } = useAuthStatus(logado)
+
+  if (sessionLoading) {
     return (
       <div className={`${SHELL} items-center justify-center p-6`}>
         <div className="w-full max-w-sm space-y-3">
@@ -55,8 +78,9 @@ function RootLayout() {
   }
 
   // Backend fora do ar não pode virar redirect para /login — daria um loop com
-  // a própria tela de login, que também depende do backend.
-  if (isError) {
+  // a própria tela de login. `useSession` já traduz 401 para `null`, então cair
+  // aqui significa mesmo falha de rede.
+  if (sessionError) {
     return (
       <div className={`${SHELL} items-center justify-center p-6`}>
         <div className="max-w-sm space-y-4 text-center">
@@ -69,23 +93,37 @@ function RootLayout() {
             </h1>
             <p className="text-[13px] leading-relaxed text-zinc-500">
               Não foi possível falar com a API. Verifique se o serviço está no ar
-              e se <code className="text-zinc-400">VITE_API_URL</code> aponta
-              para o endereço certo.
+              e se o painel consegue alcançá-lo em{' '}
+              <code className="text-zinc-400">/api</code>.
             </p>
           </div>
-          <Button onClick={() => refetch()}>Tentar de novo</Button>
+          <Button onClick={() => refetchSession()}>Tentar de novo</Button>
         </div>
         <Toaster richColors position="top-right" />
       </div>
     )
   }
 
-  const authenticated = auth?.status === 'authenticated'
+  if (!logado && !onLogin) return <Navigate to="/login" replace />
+  if (logado && onLogin) return <Navigate to="/" replace />
 
-  if (!authenticated && !onLogin) return <Navigate to="/login" replace />
-  if (authenticated && onLogin) return <Navigate to="/" replace />
+  // Senha definida por outra pessoa: trocar é o único caminho para frente.
+  if (logado && user!.trocar_senha && pathname !== '/trocar-senha') {
+    return <Navigate to="/trocar-senha" replace />
+  }
 
-  if (onLogin) {
+  // Só o owner vai para a tela de conexão: um viewer não tem permissão para
+  // completá-la, então lá seria um beco sem saída. Ele fica no feed com o
+  // histórico, e o aviso aparece no Header.
+  const telegramConectado = auth?.status === 'authenticated'
+  const precisaConectar =
+    logado && user!.papel === 'owner' && auth && !telegramConectado
+
+  if (precisaConectar && !SEM_TELEGRAM_OK.includes(pathname)) {
+    return <Navigate to="/telegram" replace />
+  }
+
+  if (BARE_ROUTES.includes(pathname)) {
     return (
       <div className={`${SHELL} items-center justify-center p-6`}>
         <Outlet />

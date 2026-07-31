@@ -44,11 +44,7 @@ def _parse_response(content: str) -> tuple[bool, str | None]:
 
 
 class LLMValidator:
-    """Verifica, via LLM, se um candidato do matcher é mesmo a promoção buscada.
-
-    Fail-open: desativado, sem API key, ou em erro/timeout, aprova o candidato
-    (retorna True) para não perder promoções reais por falha transitória.
-    """
+    """Verifica, via LLM, se um candidato do matcher é mesmo a promoção buscada."""
 
     def __init__(self) -> None:
         self.llm: ChatOpenAI | None = None
@@ -69,11 +65,7 @@ class LLMValidator:
     async def validate(
         self, texto: str | None, interest: ProductInterest
     ) -> tuple[bool, str | None, bool]:
-        """Retorna (aprovado, motivo, validado).
-
-        `validado` é False nos caminhos fail-open (desativada/sem texto/erro), para
-        distinguir "IA aprovou" de "IA não rodou".
-        """
+        """Retorna (aprovado, motivo, validado)."""
         if self.llm is None or not texto:
             return True, None, False
         try:

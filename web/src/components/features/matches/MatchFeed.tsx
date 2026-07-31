@@ -23,9 +23,6 @@ export function MatchFeed({ filters }: { filters: MatchFilters }) {
   const matches = data?.pages.flatMap((p) => p.items) ?? []
   const total = data?.pages[0]?.total ?? 0
 
-  // Mantém o modal em sincronia com o polling: o objeto vindo da lista é
-  // recriado a cada refetch, então buscar pelo id evita exibir dados velhos
-  // (por exemplo o estado de leitura logo após o auto-marcar).
   const selectedLive = selected
     ? (matches.find((m) => m.id === selected.id) ?? selected)
     : null

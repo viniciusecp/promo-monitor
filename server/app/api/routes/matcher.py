@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
 from app.database.session import get_db
 from app.models.product_interest import ProductInterest
 from app.repositories.interest_repo import InterestRepository
@@ -18,7 +17,6 @@ class PreviewRequest(BaseModel):
     palavras_chave: list[str] = Field(default_factory=list)
     palavras_excluidas: list[str] = Field(default_factory=list)
     preco_maximo: float | None = Field(None, ge=0)
-    limiar: float | None = Field(None, ge=0, le=1)
     limit: int = Field(500, ge=1, le=5000)
 
 
@@ -53,13 +51,12 @@ def preview(data: PreviewRequest, db: Session = Depends(get_db)) -> PreviewRespo
         interest = ProductInterest(
             nome_produto=data.nome_produto,
             preco_maximo=data.preco_maximo,
-            limiar_match=data.limiar,
             palavras_chave=data.palavras_chave,
             palavras_excluidas=data.palavras_excluidas,
             ativo=True,
         )
 
-    threshold = data.limiar or interest.limiar_match or settings.match_score_threshold
+    threshold = 0.6
 
     messages = MessageRepository(db).list_recent(data.limit)
     items: list[PreviewItem] = []

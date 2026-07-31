@@ -1,4 +1,7 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3333'
+/** Relativa de propósito: em produção o nginx da imagem web proxia `/api/`, em
+ *  dev o `server.proxy` do vite.config.ts. Mesma origem é o que permite o cookie
+ *  de sessão sem CORS, e o que dispensa rebuild ao trocar de IP/domínio. */
+const BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
 
 class ApiError extends Error {
   status: number
@@ -31,8 +34,11 @@ async function request<T>(
 ): Promise<T> {
   const url = `${BASE_URL}${path}`
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
     ...options,
+    // O cookie de sessão é HttpOnly: não há token em JS para pôr num header, e
+    // o navegador só o anexa com `credentials`.
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
   })
 
   if (res.status === 204) return undefined as T
@@ -51,6 +57,8 @@ export const api = {
     request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
   put: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+  patch: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (path: string) => request<void>(path, { method: 'DELETE' }),
 }
 

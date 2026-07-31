@@ -14,8 +14,6 @@ class AppConfigService:
         return self._to_dict(self.repo.get_or_create())
 
     async def update(self, data: SettingsUpdate) -> dict:
-        # `exclude_unset` é o que dá semântica parcial ao PUT: o frontend manda
-        # só o campo que mudou e o resto fica intacto.
         changes = data.model_dump(exclude_unset=True)
 
         if "telegram_bot_token" in changes:
@@ -27,9 +25,6 @@ class AppConfigService:
         )
 
         if "telegram_bot_token" in changes:
-            # Grava primeiro, aplica depois: se o token novo for inválido ele
-            # continua salvo e o erro aparece em `bot_last_error`, dando ao
-            # usuário a chance de corrigir sem reiniciar nada.
             await bot_manager.apply_token(config.telegram_bot_token, SessionLocal)
 
         return self._to_dict(config)

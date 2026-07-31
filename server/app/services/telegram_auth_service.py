@@ -1,8 +1,4 @@
-"""Orquestra a máquina de autenticação com o ciclo de vida do pipeline.
-
-O `TelegramAuthenticator` só sabe autenticar; é aqui que "autenticou" vira
-"começa a capturar mensagens" e "saiu" vira "para tudo".
-"""
+"""Orquestra a máquina de autenticação com o ciclo de vida do pipeline."""
 
 from app.core.logging import logger
 from app.telegram.auth import AuthSnapshot, authenticator
@@ -30,9 +26,6 @@ class TelegramAuthService:
 
     async def _after_login(self, snapshot: AuthSnapshot) -> dict:
         if snapshot.status == "authenticated":
-            # Uma falha ao subir o pipeline não pode derrubar a resposta do
-            # login: o usuário está autenticado de qualquer forma, e o painel
-            # mostra `worker_running: false` com o erro em Configurações.
             try:
                 await supervisor.ensure_started()
             except Exception as e:

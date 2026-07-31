@@ -26,7 +26,6 @@ SessionLocal = sessionmaker(bind=engine, class_=Session, expire_on_commit=False)
 # idempotente no startup para bancos SQLite já existentes.
 _COLUMN_MIGRATIONS: dict[str, dict[str, str]] = {
     "app_config": {"telegram_bot_token": "TEXT"},
-    "product_interests": {"limiar_match": "FLOAT"},
     "promotion_matches": {
         "matched_keyword": "TEXT",
         "llm_motivo": "TEXT",
@@ -56,24 +55,8 @@ def ensure_columns() -> None:
                     )
                     added.add((table, name))
 
-        # Backfill one-shot: o histórico anterior à feature de leitura entra como
-        # já lido — senão o contador de não lidos nasce com o banco inteiro dentro.
-        # Só roda no boot em que a coluna foi criada; nos seguintes ela já existe.
         if ("promotion_matches", "lido") in added:
             conn.execute(text("UPDATE promotion_matches SET lido = 1"))
-
-        # Idem para o token do bot: bancos que já existiam herdam o valor do
-        # .env uma única vez, na subida em que a coluna nasceu. Instalação nova
-        # é semeada em `AppConfigRepository.get_or_create()` — lá a linha só
-        # passa a existir *depois* desta migração.
-        if ("app_config", "telegram_bot_token") in added and settings.telegram_bot_token:
-            conn.execute(
-                text(
-                    "UPDATE app_config SET telegram_bot_token = :token "
-                    "WHERE telegram_bot_token IS NULL"
-                ),
-                {"token": settings.telegram_bot_token},
-            )
 
 
 def get_db() -> Session:

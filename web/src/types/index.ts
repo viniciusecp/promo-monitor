@@ -24,3 +24,16 @@ export type {
   AuthUser,
   AuthStatusResponse,
 } from './auth'
+export type {
+  Papel,
+  SessionUser,
+  SessionResponse,
+  LoginRequest,
+  ChangePasswordRequest,
+} from './session'
+export type {
+  UserResponse,
+  UserCreate,
+  UserUpdate,
+  UserPasswordReset,
+} from './user'

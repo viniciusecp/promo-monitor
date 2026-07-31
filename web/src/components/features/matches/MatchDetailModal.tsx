@@ -22,17 +22,11 @@ export function MatchDetailModal({
     if (open && matchId !== undefined && !jaLido) {
       markRead.mutate({ id: matchId, lido: true })
     }
-    // Depende de matchId, e não do objeto `match`: a identidade dele muda a
-    // cada refetch da lista, o que re-dispararia o POST toda vez que o usuário
-    // voltasse para a aba com o modal aberto.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, matchId])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* w-full + o clamp mobile antes do sm: — sem isso o max-w-lg do
-          call-site apaga o max-w-[calc(100%-2rem)] do DialogContent pelo
-          tailwind-merge, e o modal fica com 512px numa tela de 360px. */}
       <DialogContent className="w-full max-w-[calc(100%-2rem)] border border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-lg">
         <DialogTitle className="pr-8 text-base font-medium text-zinc-100">
           {match?.produto_nome}

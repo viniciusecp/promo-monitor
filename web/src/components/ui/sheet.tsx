@@ -8,10 +8,6 @@ import { XIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
-// Construído sobre o primitivo `dialog` do base-ui, e não sobre `drawer`: o
-// drawer é orientado a swipe/snap-points, comportamento que não usamos aqui.
-// Um dialog ancorado numa borda resolve com muito menos superfície.
-
 const sheetVariants = cva(
   "fixed z-50 flex flex-col bg-popover text-popover-foreground ring-1 ring-foreground/10 duration-200 outline-none data-open:animate-in data-closed:animate-out",
   {

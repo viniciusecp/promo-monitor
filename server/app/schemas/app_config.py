@@ -4,11 +4,6 @@ from pydantic import BaseModel, Field
 
 
 class SettingsUpdate(BaseModel):
-    # `alert_target` não entra aqui de propósito: o destino é gravado só pelo
-    # handler `/start` do bot, que é a única forma de garantir que o bot
-    # consegue escrever no chat escolhido. Semântica parcial preservada (o
-    # service usa `exclude_unset`): campo ausente significa "não mexe" e `null`
-    # explícito significa "limpa".
     telegram_bot_token: str | None = Field(None, max_length=255)
 
 

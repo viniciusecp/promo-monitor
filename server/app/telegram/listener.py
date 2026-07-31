@@ -14,17 +14,9 @@ class MessageListener:
         self._handler_registered = False
 
     async def start(self) -> None:
-        # Idempotente de propósito: com o login pela web, `ensure_started()` do
-        # supervisor pode ser chamado mais de uma vez (boot + POST de login que
-        # chegou atrasado). Registrar o handler duas vezes faria cada mensagem
-        # ser processada em dobro — matches e alertas duplicados.
         if self._handler_registered:
             return
 
-        # Só processa grupos/canais e mensagens recebidas. Ignora DMs (inclusive
-        # a DM que o bot envia ao próprio usuário) e mensagens enviadas pela
-        # própria conta — isso evita o loop de feedback em que um alerta vira
-        # uma nova mensagem que casa com um interesse e dispara outro alerta.
         self.client.add_event_handler(
             self._on_new_message,
             NewMessage(incoming=True, func=lambda e: e.is_group or e.is_channel),

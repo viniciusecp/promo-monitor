@@ -11,14 +11,14 @@ import {
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { useMatchStats } from '@/hooks/useMatches'
+import { useSession } from '@/hooks/useSession'
+import { UserMenu } from './UserMenu'
 
-// `/` é o feed de matches — não existe mais uma rota /matches separada
-// (ela redireciona para cá).
 const navItems = [
   { to: '/', label: 'Matches', icon: ListChecks, showUnread: true },
   { to: '/interests', label: 'Interesses', icon: ShoppingBag },
   { to: '/messages', label: 'Mensagens', icon: MessageSquare },
-  { to: '/settings', label: 'Configurações', icon: Cog },
+  { to: '/settings', label: 'Configurações', icon: Cog, ownerOnly: true },
 ]
 
 function Logo({ collapsed = false }: { collapsed?: boolean }) {
@@ -48,11 +48,16 @@ function SidebarNav({
 }) {
   const { pathname } = useLocation()
   const { data: stats } = useMatchStats()
+  const { data: user } = useSession()
   const unread = stats?.nao_lidos ?? 0
+
+  const items = navItems.filter(
+    (item) => !item.ownerOnly || user?.papel === 'owner',
+  )
 
   return (
     <nav className={cn('flex-1 space-y-1 py-4', collapsed ? 'px-2' : 'px-3')}>
-      {navItems.map((item) => {
+      {items.map((item) => {
         const active =
           pathname === item.to ||
           (item.to !== '/' && pathname.startsWith(item.to))
@@ -63,8 +68,6 @@ function SidebarNav({
             key={item.to}
             to={item.to}
             onClick={onNavigate}
-            // Comprimido o rótulo some, então o title vira a única forma de
-            // saber para onde o ícone leva.
             title={collapsed ? item.label : undefined}
             className={cn(
               'flex items-center rounded-lg py-2 text-sm font-medium transition-colors',
@@ -76,7 +79,6 @@ function SidebarNav({
           >
             <span className="relative flex shrink-0 items-center">
               <item.icon className="size-4" />
-              {/* Sem espaço para o pill numérico: vira um ponto sobre o ícone. */}
               {collapsed && badge && (
                 <span className="absolute -right-1.5 -top-1 size-2 rounded-full bg-amber-400 ring-2 ring-zinc-950" />
               )}
@@ -95,15 +97,6 @@ function SidebarNav({
         )
       })}
     </nav>
-  )
-}
-
-function Footer({ collapsed = false }: { collapsed?: boolean }) {
-  if (collapsed) return null
-  return (
-    <div className="border-t border-zinc-800 px-5 py-3">
-      <p className="text-[11px] text-zinc-600">Promo Monitor v1.0</p>
-    </div>
   )
 }
 
@@ -157,7 +150,7 @@ export function Sidebar({
     >
       <Logo collapsed={collapsed} />
       <SidebarNav collapsed={collapsed} />
-      <Footer collapsed={collapsed} />
+      <UserMenu collapsed={collapsed} />
       <CollapseToggle collapsed={collapsed} onToggle={onToggle} />
     </aside>
   )
@@ -180,7 +173,7 @@ export function MobileNav({
         <SheetTitle className="sr-only">Navegação</SheetTitle>
         <Logo />
         <SidebarNav onNavigate={() => onOpenChange(false)} />
-        <Footer />
+        <UserMenu />
       </SheetContent>
     </Sheet>
   )

@@ -9,11 +9,6 @@ interface Props {
   settings?: SettingsResponse
 }
 
-/**
- * Estado do destino dos alertas. Só leitura: o destino é definido exclusivamente
- * pelo `/start` mandado ao bot (o handler grava `alert_target` no servidor) e o
- * polling de 5s da tela traz o valor novo sozinho.
- */
 export function AlertStatus({ settings }: Props) {
   const testAlert = useTestAlert()
 

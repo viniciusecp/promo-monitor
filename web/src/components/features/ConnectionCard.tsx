@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useAuthStatus, useLogout } from '@/hooks/useTelegramAuth'
+import { useAuthStatus, useTelegramLogout } from '@/hooks/useTelegramAuth'
 import { useHealth } from '@/hooks/useHealth'
 
 function StatusBadge({ ok, children }: { ok: boolean; children: React.ReactNode }) {
@@ -40,7 +40,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export function ConnectionCard() {
   const { data: auth } = useAuthStatus()
   const { data: health } = useHealth()
-  const logout = useLogout()
+  const logout = useTelegramLogout()
   const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
 
@@ -53,7 +53,7 @@ export function ConnectionCard() {
       onSuccess: () => {
         setConfirmOpen(false)
         toast.success('Conta desconectada')
-        navigate({ to: '/login' })
+        navigate({ to: '/telegram' })
       },
       onError: () => toast.error('Não foi possível desconectar'),
     })
@@ -72,8 +72,6 @@ export function ConnectionCard() {
           </StatusBadge>
         </Row>
         <Row label="Captura de mensagens">
-          {/* worker_running distingue "logado" de "capturando" — antes um worker
-              morto ficava invisível, com o /health devolvendo 200 assim mesmo. */}
           <StatusBadge ok={!!health?.worker_running}>
             {health?.worker_running ? 'ativa' : 'parada'}
           </StatusBadge>

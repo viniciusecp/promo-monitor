@@ -23,27 +23,28 @@ class Settings(BaseSettings):
     telegram_api_hash: str
     telegram_phone: str
     telegram_session_file: str = str(SESSION_DIR / "telegram.session")
-    telegram_bot_token: str | None = None
     telegram_bot_session_file: str = str(SESSION_DIR / "bot.session")
 
     database_url: str = f"sqlite:///{DATA_DIR / 'promobot.db'}"
 
-    match_score_threshold: float = 0.6
-
-    # Fuso usado como fallback quando o cliente não manda `tz`. Só afeta a
-    # fronteira de calendário do período "hoje" — janelas móveis (7d/30d) não usam.
     app_timezone: str = "America/Sao_Paulo"
 
-    # Validação dos candidatos do matcher por LLM (via LangChain + OpenRouter).
-    # Sem openrouter_api_key, a validação fica desativada (comportamento atual).
     openrouter_api_key: str | None = None
     llm_validation_enabled: bool = True
     llm_base_url: str = "https://openrouter.ai/api/v1"
     llm_model: str = "openrouter/free"
     llm_timeout: float = 20.0
 
-    api_host: str = "0.0.0.0"
     api_port: int = 3333
+
+    auth_session_days: int = 30
+    auth_cookie_name: str = "pm_session"
+    auth_cookie_secure: bool = False
+
+    auth_seed_email: str | None = None
+    auth_seed_password: str | None = None
+
+    cors_origins: list[str] = []
 
     def model_post_init(self, __context) -> None:
         DATA_DIR.mkdir(parents=True, exist_ok=True)

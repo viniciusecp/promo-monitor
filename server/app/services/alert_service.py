@@ -39,9 +39,6 @@ class AlertService:
         bot_provider: Callable[[], TelegramClient | None],
         session_factory,
     ) -> None:
-        # Provider, não instância: o token do bot é trocável a quente, e guardar
-        # o cliente aqui deixaria este serviço com uma referência morta para
-        # sempre depois da primeira troca.
         self.bot_provider = bot_provider
         self.session_factory = session_factory
 

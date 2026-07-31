@@ -45,6 +45,26 @@ class TelegramAuthStateError(AppException):
         super().__init__(f"Expected auth status {expected!r}, got {actual!r}")
 
 
+class AuthError(AppException):
+    """Falha de autenticação/autorização do painel, com código estável.
+
+    Mesmo contrato de `TelegramAuthError`: o frontend decide a mensagem pelo
+    `code`, não pelo status HTTP.
+    """
+
+    def __init__(self, code: str, message: str, retry_after: int | None = None) -> None:
+        self.code = code
+        self.message = message
+        self.retry_after = retry_after
+        super().__init__(message)
+
+
+class UserNotFoundError(AppException):
+    def __init__(self, user_id: int) -> None:
+        self.user_id = user_id
+        super().__init__(f"User {user_id} not found")
+
+
 class TelegramAuthError(AppException):
     """Erro do Telegram já traduzido para um código estável da API."""
 

@@ -3,11 +3,6 @@ import { Button } from '@/components/ui/button'
 import { useMarkRead } from '@/hooks/useMatches'
 import type { MatchDetailResponse } from '@/types'
 
-/**
- * Alterna lido/não lido. O stopPropagation é obrigatório: a linha (ou o card)
- * inteira é o alvo de clique que abre o modal, e sem isso todo toggle também
- * abriria o dialog — que por sua vez marca como lido, anulando o "desmarcar".
- */
 export function ReadToggle({
   match,
   className,

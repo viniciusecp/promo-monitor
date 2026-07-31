@@ -117,7 +117,6 @@ class CompositeMatcher:
         return False
 
     def _has_keywords(self, interest: ProductInterest) -> bool:
-        """Há ao menos uma palavra-chave não vazia após normalização?"""
         return any(normalize_text(kw) for kw in interest.palavras_chave or [])
 
     def score_breakdown(
@@ -128,9 +127,6 @@ class CompositeMatcher:
         normalized = normalize_text(text)
         if self._is_excluded(normalized, interest):
             return 0.0, {name: 0.0 for name in self.strategies}
-        # Palavra-chave manda: se o interesse define palavras-chave, a mensagem
-        # precisa conter uma delas. A similaridade fuzzy com o nome do produto só
-        # vale como fallback quando NÃO há palavras-chave definidas.
         keyword_score = self.strategies["keyword"].compute_score(normalized, interest)
         if self._has_keywords(interest):
             fuzzy_score = 0.0
@@ -144,8 +140,6 @@ class CompositeMatcher:
         return score
 
     def matched_term(self, text: str, interest: ProductInterest) -> str | None:
-        """Explica o match: a palavra-chave que disparou ou, no caso de só a
-        similaridade fuzzy ter qualificado, o próprio nome do produto."""
         if not text:
             return None
         normalized = normalize_text(text)
@@ -154,8 +148,6 @@ class CompositeMatcher:
         kw = self.strategies["keyword"].matched_keyword(normalized, interest)  # type: ignore[attr-defined]
         if kw is not None:
             return kw
-        # Fallback pelo nome do produto só quando o match veio da similaridade
-        # fuzzy — isto é, quando o interesse não tem palavras-chave definidas.
         if self._has_keywords(interest):
             return None
         if self.strategies["fuzzy"].compute_score(normalized, interest) > 0:

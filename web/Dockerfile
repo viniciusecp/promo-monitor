@@ -10,9 +10,6 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-# Vite injeta import.meta.env.* em tempo de build
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
 RUN pnpm build
 
 FROM nginx:alpine

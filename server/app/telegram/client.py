@@ -55,7 +55,6 @@ async def is_authorized() -> bool:
 
 
 def _delete_session_files(path_str: str) -> None:
-    """Apaga o arquivo de sessão e o journal do SQLite que o Telethon usa."""
     path = Path(path_str)
     for candidate in (path, path.with_name(path.name + "-journal")):
         try:
@@ -76,9 +75,7 @@ async def _disconnect(client: TelegramClient | None) -> None:
 
 
 async def reset_client(delete_session: bool = False) -> None:
-    """Descarta o cliente de usuário para que o próximo `get_client()` construa
-    um novo. Depois de `log_out()` o objeto fica com a sessão morta e não dá
-    para reautenticar nele."""
+    """Descarta o cliente de usuário para que o próximo `get_client()` construa um novo."""
     global _client
     await _disconnect(_client)
     _client = None
@@ -87,13 +84,7 @@ async def reset_client(delete_session: bool = False) -> None:
 
 
 async def reset_bot_client(delete_session: bool = False) -> None:
-    """Idem para o bot.
-
-    `delete_session=True` é obrigatório na troca de token: o `start(bot_token=)`
-    do Telethon só faz sign-in quando a sessão ainda não está autorizada, então
-    um `bot.session` antigo faria o token novo ser silenciosamente ignorado e os
-    alertas continuariam saindo pelo bot anterior.
-    """
+    """Idem para o bot."""
     global _bot_client
     await _disconnect(_bot_client)
     _bot_client = None

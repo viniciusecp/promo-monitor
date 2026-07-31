@@ -2,7 +2,6 @@ export interface InterestResponse {
   id: number
   nome_produto: string
   preco_maximo: number | null
-  limiar_match: number | null
   palavras_chave: string[]
   palavras_excluidas: string[]
   ativo: boolean
@@ -13,7 +12,6 @@ export interface InterestResponse {
 export interface InterestCreate {
   nome_produto: string
   preco_maximo?: number | null
-  limiar_match?: number | null
   palavras_chave?: string[]
   palavras_excluidas?: string[]
   ativo?: boolean
@@ -22,7 +20,6 @@ export interface InterestCreate {
 export interface InterestUpdate {
   nome_produto?: string
   preco_maximo?: number | null
-  limiar_match?: number | null
   palavras_chave?: string[]
   palavras_excluidas?: string[]
   ativo?: boolean

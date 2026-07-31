@@ -1,16 +1,4 @@
-"""Bot de notificações — ciclo de vida trocável a quente.
-
-O token vive em `app_config.telegram_bot_token` (o `.env` só semeia o valor
-inicial), então salvar um token novo no painel precisa valer sem reiniciar o
-container. Isso obriga a um cuidado específico: o `start(bot_token=...)` do
-Telethon só faz sign-in quando a sessão ainda **não** está autorizada. Com um
-`bot.session` do bot anterior no disco, a troca de token pareceria funcionar e
-os alertas continuariam saindo pelo bot antigo. Por isso o `stop()` apaga o
-arquivo de sessão e a subida usa `connect()` + `sign_in(bot_token=...)`.
-
-Um token inválido nunca sobe para o chamador: fica em `last_error` e aparece no
-painel. O listener de mensagens não pode deixar de subir por causa do bot.
-"""
+"""Bot de notificações — ciclo de vida trocável a quente."""
 
 from __future__ import annotations
 
@@ -52,8 +40,6 @@ class BotManager:
         self._last_error: str | None = None
 
     def get_client(self) -> TelegramClient | None:
-        """Resolvido a cada envio pelo `AlertService` — nunca guardar o
-        resultado, senão uma troca de token deixa uma referência morta."""
         return self._client
 
     def status(self) -> BotSnapshot:
@@ -65,8 +51,6 @@ class BotManager:
         )
 
     def snapshot_for(self, token: str | None) -> BotSnapshot:
-        """Status combinado com o token gravado no banco — `configured` reflete
-        o que está salvo, não só o que conseguiu subir."""
         snap = self.status()
         snap.configured = bool(token)
         return snap
@@ -96,10 +80,6 @@ class BotManager:
         return self._client is not None and self._client.is_connected()
 
     async def _teardown(self) -> None:
-        # Desconecta e apaga `bot.session`. Não faz `log_out()` de propósito:
-        # é um round-trip que pode travar e não agrega nada — apagar o arquivo
-        # local já é o que torna a troca de token efetiva, e uma autorização
-        # órfã de bot no lado do Telegram é inofensiva.
         await reset_bot_client(delete_session=True)
         self._client = None
         self._running_token = None
@@ -138,20 +118,10 @@ class BotManager:
 
     def _register_handlers(self, client: TelegramClient, session_factory) -> None:
         async def _on_start(event: NewMessage.Event) -> None:
-            # O username de um bot é público e pesquisável, e `alert_target` é
-            # um campo só. Sem esta checagem, um `/start` de qualquer estranho
-            # *sequestraria* o destino: ele passaria a receber as promoções e o
-            # dono pararia de receber, em silêncio. Quem autoriza é o remetente,
-            # não o chat — mandar `/start` de dentro de um grupo continua
-            # apontando o alerta para o grupo.
             owner_id = authenticator.user_id
             sender_id = event.sender_id
 
             if owner_id is None:
-                # Fecha em vez de abrir. Esta janela existe de verdade: o token
-                # é salvo pelo painel, que não exige login, então o bot pode
-                # estar no ar antes de a conta de usuário ter sido conectada —
-                # e é justamente aí que não há com quem comparar.
                 await event.respond(
                     "⚠️ Conecte a sua conta do Telegram no painel antes de ativar "
                     "as notificações."
@@ -160,8 +130,6 @@ class BotManager:
                 return
 
             if sender_id != owner_id:
-                # Resposta neutra de propósito: não confirma para o estranho que
-                # ele achou o bot certo nem revela nada do dono.
                 await event.respond("Este bot é privado.")
                 logger.warning(
                     "bot_target_denied",

@@ -73,9 +73,6 @@ class MatchRepository(BaseRepository[PromotionMatch]):
         )
 
     def set_lido(self, match_id: int, lido: bool) -> PromotionMatch | None:
-        # A coluna guarda naive-UTC: no SQLite o bind processor do SQLAlchemy
-        # serializa só os campos de wall-clock e descarta o tzinfo (não converte).
-        # Remover o tzinfo aqui deixa esse contrato explícito.
         return self.update(
             match_id,
             lido=lido,
@@ -117,9 +114,6 @@ class MatchRepository(BaseRepository[PromotionMatch]):
             )
         ).where(*_where_clauses(filters, since))
 
-        # Desempate obrigatório, não defensivo: preco_encontrado é nullable e
-        # score se concentra em 1.0. Sem chave secundária, a paginação por
-        # offset repete e pula linhas entre páginas.
         stmt = stmt.order_by(direction(column), desc(PromotionMatch.id))
 
         return list(self.db.execute(stmt.offset(skip).limit(limit)).all())
@@ -127,17 +121,12 @@ class MatchRepository(BaseRepository[PromotionMatch]):
     def count_detailed(
         self, filters: MatchFilterParams, since: datetime | None
     ) -> int:
-        # O mesmo join da lista: chat_id vive em TelegramMessage, então contar
-        # sobre um select(PromotionMatch) pelado ignoraria o filtro de grupo.
         stmt = self._base_join(select(func.count(PromotionMatch.id)))
         return self.db.scalar(stmt.where(*_where_clauses(filters, since))) or 0
 
     def mark_all_read(
         self, filters: MatchFilterParams, since: datetime | None
     ) -> int:
-        # Coleta os ids antes: o SQLite não aceita UPDATE ... FROM com join ORM.
-        # O filtro extra por lido=False faz o retorno ser contagem real do que
-        # mudou, e não "linhas tocadas".
         ids = list(
             self.db.scalars(
                 self._base_join(select(PromotionMatch.id)).where(

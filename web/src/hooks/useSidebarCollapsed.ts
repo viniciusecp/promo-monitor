@@ -7,11 +7,6 @@ function readStored(): boolean {
   return window.localStorage.getItem(STORAGE_KEY) === '1'
 }
 
-/**
- * Estado de "menu comprimido" do desktop, persistido em localStorage.
- * A leitura é feita no inicializador do useState para o primeiro paint já sair
- * na largura certa — ler num efeito daria um flash da sidebar aberta.
- */
 export function useSidebarCollapsed() {
   const [collapsed, setCollapsed] = useState(readStored)
 

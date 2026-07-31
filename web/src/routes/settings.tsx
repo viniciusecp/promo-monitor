@@ -5,6 +5,7 @@ import { AlertStatus } from '@/components/features/AlertStatus'
 import { BotSetupGuide } from '@/components/features/BotSetupGuide'
 import { BotTokenForm } from '@/components/features/BotTokenForm'
 import { ConnectionCard } from '@/components/features/ConnectionCard'
+import { UsersCard } from '@/components/features/users/UsersCard'
 import { useSettings } from '@/hooks/useSettings'
 
 export const Route = createFileRoute('/settings')({
@@ -18,6 +19,19 @@ function Settings() {
 
   return (
     <div className="max-w-lg space-y-6">
+      {/* Sem checagem de papel aqui: /settings e /users respondem 403 para
+          viewer e o item some da sidebar. */}
+      <Card className="border-zinc-800 bg-zinc-950 text-zinc-100">
+        <CardHeader>
+          <CardTitle className="text-sm font-medium text-zinc-200">
+            Usuários
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <UsersCard />
+        </CardContent>
+      </Card>
+
       <Card className="border-zinc-800 bg-zinc-950 text-zinc-100">
         <CardHeader>
           <CardTitle className="text-sm font-medium text-zinc-200">

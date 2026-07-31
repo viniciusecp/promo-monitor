@@ -92,8 +92,6 @@ function CodeStep() {
   const requestCode = useRequestCode()
   const [code, setCode] = useState('')
 
-  // Cooldown fixo para o reenvio: pedir código em sequência é o caminho mais
-  // curto para um FloodWait de horas.
   const cooldown = useCountdown(60)
 
   function handleSubmit(e: React.FormEvent) {
@@ -164,7 +162,6 @@ function PasswordStep() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!password) return
-    // Só o valor em trânsito: nada de localStorage nem de cache de query.
     submitPassword.mutate(password, { onError: () => setPassword('') })
   }
 

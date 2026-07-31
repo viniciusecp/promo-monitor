@@ -1,16 +1,8 @@
-"""Login do Telegram pela web.
+"""Login do Telegram pela web."""
 
-Substitui os `input()` que travavam o event loop na primeira subida. Todas as
-rotas devolvem o `AuthStatusResponse` completo para que o frontend possa
-atualizar o cache sem um GET de volta.
+from fastapi import APIRouter, Depends, HTTPException
 
-Nota de segurança: estas rotas são **sem autenticação**, por decisão explícita
-de quem opera o sistema (roda só em servidor local). Não exponha esta porta
-para fora da rede confiável — a senha de duas etapas trafega por aqui.
-"""
-
-from fastapi import APIRouter, HTTPException
-
+from app.api.deps import require_owner
 from app.core.exceptions import (
     TelegramAuthBusyError,
     TelegramAuthError,
@@ -23,9 +15,12 @@ from app.schemas.telegram_auth import (
 )
 from app.services.telegram_auth_service import telegram_auth_service
 
-router = APIRouter(prefix="/telegram/auth", tags=["Telegram Auth"])
+router = APIRouter(
+    prefix="/telegram/auth",
+    tags=["Telegram Auth"],
+    dependencies=[Depends(require_owner)],
+)
 
-# Código estável -> HTTP. O frontend decide a mensagem pelo código, não pelo status.
 _STATUS_BY_CODE = {
     "code_invalid": 400,
     "code_expired": 400,

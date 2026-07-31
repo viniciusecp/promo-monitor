@@ -33,9 +33,6 @@ def list_matches(
     return service.list(query, skip=query.skip, limit=query.limit)
 
 
-# As rotas literais vêm antes de qualquer /{match_id} — aqui a contagem de
-# segmentos já as distingue, mas manter a ordem evita surpresa se um
-# GET /matches/{id} for adicionado depois.
 @router.get("/stats", response_model=MatchStatsResponse)
 def match_stats(
     tz: str | None = Query(None),

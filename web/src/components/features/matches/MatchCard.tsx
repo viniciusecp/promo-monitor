@@ -10,12 +10,6 @@ import {
 import { ReadToggle } from './ReadToggle'
 import type { MatchDetailResponse } from '@/types'
 
-/**
- * Versão mobile da linha da tabela. É um componente separado de propósito: um
- * <table> não vira cards empilhados só com CSS sem overrides de display:block
- * que quebram a semântica e o overflow-x-auto do wrapper. A lógica de fato
- * mora em `lib/match.ts`, então a duplicação aqui é só de layout.
- */
 export function MatchCard({
   match,
   onSelect,

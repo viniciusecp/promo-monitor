@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TrocarSenhaRouteImport } from './routes/trocar-senha'
+import { Route as TelegramRouteImport } from './routes/telegram'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
@@ -18,6 +20,16 @@ import { Route as InterestsIndexRouteImport } from './routes/interests/index'
 import { Route as InterestsNewRouteImport } from './routes/interests/new'
 import { Route as InterestsInterestIdEditRouteImport } from './routes/interests/$interestId.edit'
 
+const TrocarSenhaRoute = TrocarSenhaRouteImport.update({
+  id: '/trocar-senha',
+  path: '/trocar-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TelegramRoute = TelegramRouteImport.update({
+  id: '/telegram',
+  path: '/telegram',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -63,6 +75,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/telegram': typeof TelegramRoute
+  '/trocar-senha': typeof TrocarSenhaRoute
   '/interests/new': typeof InterestsNewRoute
   '/interests/': typeof InterestsIndexRoute
   '/matches/': typeof MatchesIndexRoute
@@ -73,6 +87,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/telegram': typeof TelegramRoute
+  '/trocar-senha': typeof TrocarSenhaRoute
   '/interests/new': typeof InterestsNewRoute
   '/interests': typeof InterestsIndexRoute
   '/matches': typeof MatchesIndexRoute
@@ -84,6 +100,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/telegram': typeof TelegramRoute
+  '/trocar-senha': typeof TrocarSenhaRoute
   '/interests/new': typeof InterestsNewRoute
   '/interests/': typeof InterestsIndexRoute
   '/matches/': typeof MatchesIndexRoute
@@ -96,6 +114,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/settings'
+    | '/telegram'
+    | '/trocar-senha'
     | '/interests/new'
     | '/interests/'
     | '/matches/'
@@ -106,6 +126,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/settings'
+    | '/telegram'
+    | '/trocar-senha'
     | '/interests/new'
     | '/interests'
     | '/matches'
@@ -116,6 +138,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/settings'
+    | '/telegram'
+    | '/trocar-senha'
     | '/interests/new'
     | '/interests/'
     | '/matches/'
@@ -127,6 +151,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
+  TelegramRoute: typeof TelegramRoute
+  TrocarSenhaRoute: typeof TrocarSenhaRoute
   InterestsNewRoute: typeof InterestsNewRoute
   InterestsIndexRoute: typeof InterestsIndexRoute
   MatchesIndexRoute: typeof MatchesIndexRoute
@@ -136,6 +162,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/trocar-senha': {
+      id: '/trocar-senha'
+      path: '/trocar-senha'
+      fullPath: '/trocar-senha'
+      preLoaderRoute: typeof TrocarSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/telegram': {
+      id: '/telegram'
+      path: '/telegram'
+      fullPath: '/telegram'
+      preLoaderRoute: typeof TelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -199,6 +239,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
+  TelegramRoute: TelegramRoute,
+  TrocarSenhaRoute: TrocarSenhaRoute,
   InterestsNewRoute: InterestsNewRoute,
   InterestsIndexRoute: InterestsIndexRoute,
   MatchesIndexRoute: MatchesIndexRoute,

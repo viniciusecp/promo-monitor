@@ -10,10 +10,6 @@ class InterestRepository(BaseRepository[ProductInterest]):
         super().__init__(db, ProductInterest)
 
     def list_active(self) -> list[ProductInterest]:
-        # Query própria em vez de `self.list(ativo=True)`: o BaseRepository
-        # aplica limit=100 por padrão, e este método alimenta o worker do
-        # Telegram — truncar aqui faria os interesses excedentes pararem de
-        # ser avaliados silenciosamente. Não é uma listagem paginada.
         query = (
             select(ProductInterest)
             .where(ProductInterest.ativo.is_(True))

@@ -9,9 +9,6 @@ import './index.css'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // O feed se atualiza no foco da aba (ver useMatches), então este
-      // staleTime é o amortecedor: alternar de aba rapidinho não vira uma
-      // cascata de requests, mas voltar depois de qualquer ausência real sim.
       staleTime: 15_000,
       retry: 1,
     },

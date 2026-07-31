@@ -26,10 +26,6 @@ export type MatchStatus = 'alertado' | 'reprovado'
 export type MatchOrderBy = 'data' | 'preco' | 'score'
 export type MatchOrderDir = 'asc' | 'desc'
 
-/**
- * Filtros do feed. `nao_lidos` combina em AND com o resto; `alertado` e
- * `reprovado` combinam em OR entre si (ver o schema equivalente no backend).
- */
 export interface MatchFilters {
   periodo: MatchPeriod
   status: MatchStatus[]
