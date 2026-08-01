@@ -10,7 +10,8 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-RUN pnpm build
+ENV NODE_OPTIONS=--max-old-space-size=512
+RUN pnpm build:app
 
 FROM nginx:alpine
 
