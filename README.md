@@ -6,7 +6,7 @@ Monitor de promoções no Telegram. O backend entra nos seus grupos/canais via u
 ┌──────────────┐    mensagens     ┌─────────────────────────────────────┐
 │   Telegram   │ ───────────────▶ │  server/ (FastAPI + Telethon)       │
 │ grupos/canais│                  │  listener → matcher → LLM → alerta  │
-└──────────────┘                  │  SQLite + REST API (porta 3333)     │
+└──────────────┘                  │  SQLite + REST API (porta 4999)     │
        ▲                          └─────────────────────────────────────┘
        │ alerta via bot                         ▲
        │ (DM)                                   │ REST
@@ -27,14 +27,14 @@ Monitor de promoções no Telegram. O backend entra nos seus grupos/canais via u
 
 | Pasta | O que é | Stack | Porta |
 |-------|---------|-------|-------|
-| [`server/`](server/README.md) | API + worker do Telegram | Python 3.12, FastAPI, Telethon, SQLAlchemy/SQLite, rapidfuzz | 3333 |
+| [`server/`](server/README.md) | API + worker do Telegram | Python 3.12, FastAPI, Telethon, SQLAlchemy/SQLite, rapidfuzz | 4999 |
 | [`web/`](web/README.md) | Painel de gerenciamento | React 19, Vite, TanStack Router/Query, Tailwind v4, shadcn/ui | 3000 |
 
 ## Quickstart
 
 Você precisa das credenciais da API do Telegram (`my.telegram.org/apps`) e, para receber os alertas, de um bot criado no `@BotFather`.
 
-**Backend** (porta 3333):
+**Backend** (porta 4999):
 ```bash
 cd server
 python3 -m venv .venv && source .venv/bin/activate
@@ -55,7 +55,7 @@ pnpm install
 pnpm dev
 ```
 O painel chama a API em `/api`, que o proxy de dev do Vite encaminha para
-`http://localhost:3333`. Mesma origem em dev e em produção — é o que faz o cookie de
+`http://localhost:4999`. Mesma origem em dev e em produção — é o que faz o cookie de
 sessão funcionar nos dois modos sem CORS.
 
 Antes do primeiro acesso, defina `AUTH_SEED_EMAIL` e `AUTH_SEED_PASSWORD` no

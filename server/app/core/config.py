@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     llm_model: str = "openrouter/free"
     llm_timeout: float = 20.0
 
-    api_port: int = 3333
+    api_port: int = 4999
 
     auth_session_days: int = 30
     auth_cookie_name: str = "pm_session"

@@ -7,11 +7,11 @@ services:
     # (location /api/). Publicar esta porta recolocaria /telegram/auth/* e
     # /settings direto na internet, sem razão nenhuma.
     expose:
-      - "3333"
+      - "4999"
     env_file:
       - ./server/.env
     environment:
-      - API_PORT=3333
+      - API_PORT=4999
       - TELEGRAM_SESSION_FILE=/app/session/telegram.session
       - TELEGRAM_BOT_SESSION_FILE=/app/session/bot.session
     volumes:

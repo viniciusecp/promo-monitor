@@ -19,13 +19,13 @@ COPY . .
 ENV PATH=/root/.local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    API_PORT=3333
+    API_PORT=4999
 
 EXPOSE ${API_PORT}
 
 # /healthz e não /health: o healthcheck roda sem cookie e /health exige sessão.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD python -c "import os,urllib.request,sys; p=os.environ.get('API_PORT','3333'); sys.exit(0 if urllib.request.urlopen(f'http://localhost:{p}/healthz').status==200 else 1)"
+    CMD python -c "import os,urllib.request,sys; p=os.environ.get('API_PORT','4999'); sys.exit(0 if urllib.request.urlopen(f'http://localhost:{p}/healthz').status==200 else 1)"
 
 ENTRYPOINT ["dumb-init", "--"]
 # 1 único worker uvicorn, sem --reload: o worker do Telegram roda no mesmo
@@ -33,4 +33,4 @@ ENTRYPOINT ["dumb-init", "--"]
 # sh -c + exec para expandir $API_PORT e ainda manter o uvicorn como PID gerenciado.
 # --proxy-headers: sem isso todo request chega com o IP do nginx e o rate limit
 # do login trata o mundo inteiro como um cliente só.
-CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${API_PORT:-3333} --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${API_PORT:-4999} --proxy-headers --forwarded-allow-ips='*'"]

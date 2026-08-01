@@ -53,7 +53,7 @@ Variáveis de ambiente:
 | `TELEGRAM_BOT_TOKEN` | — | — | **Removido.** O token é configurado exclusivamente pelo painel (PUT /settings). |
 | `OPENROUTER_API_KEY` | não | vazio | Ativa a validação por LLM. Sem ela, só o matcher decide |
 | `LLM_MODEL` | não | `openrouter/free` | ID do modelo no OpenRouter (aceita variantes `:free`) |
-| `API_PORT` | não | `3333` | Porta do servidor (lida por `run.py`) |
+| `API_PORT` | não | `4999` | Porta do servidor (lida por `run.py`) |
 | `DATABASE_URL` | não | `sqlite:///data/promobot.db` | URL do banco SQLAlchemy |
 | `AUTH_SEED_EMAIL` / `AUTH_SEED_PASSWORD` | sim** | vazio | Primeiro administrador. Só é usado quando a tabela `users` está **vazia**; depois disso o banco manda |
 | `AUTH_SESSION_DAYS` | não | `30` | Validade da sessão. O cookie é persistente e se renova a cada uso |
@@ -77,9 +77,9 @@ pip install -r requirements.txt
 python3 run.py
 ```
 
-O `run.py` lê `API_PORT` do `.env` (porta padrão **3333**) e já sobe com `--reload`.
+O `run.py` lê `API_PORT` do `.env` (porta padrão **4999**) e já sobe com `--reload`.
 
-> O CLI do uvicorn **não** lê o `.env`: `uvicorn app.main:app --reload` sobe na porta padrão `8000`. Se preferir usar o CLI, informe a porta na mão: `uvicorn app.main:app --reload --port 3333`.
+> O CLI do uvicorn **não** lê o `.env`: `uvicorn app.main:app --reload` sobe na porta padrão `8000`. Se preferir usar o CLI, informe a porta na mão: `uvicorn app.main:app --reload --port 4999`.
 
 Na primeira execução não há sessão salva: o backend registra `telegram_login_required` e
 segue servindo HTTP normalmente. O login do Telegram é feito pelo painel (`/telegram` →
@@ -135,7 +135,7 @@ com **owner** são restritas a administradores. O gate mora em `app/api/router.p
 
 ```bash
 # Criar interesse
-curl -X POST http://localhost:3333/interests \
+curl -X POST http://localhost:4999/interests \
   -H "Content-Type: application/json" \
   -d '{
     "nome_produto": "iphone 15 pro",
@@ -145,19 +145,19 @@ curl -X POST http://localhost:3333/interests \
   }'
 
 # Listar interesses ativos
-curl "http://localhost:3333/interests?ativo=true"
+curl "http://localhost:4999/interests?ativo=true"
 
 # Listar matches
-curl "http://localhost:3333/matches?limit=10"
+curl "http://localhost:4999/matches?limit=10"
 
 # Trocar o token do bot (vale na hora, sem restart). O destino dos alertas não
 # é editável por aqui: mande /start ao bot pelo Telegram.
-curl -X PUT http://localhost:3333/settings \
+curl -X PUT http://localhost:4999/settings \
   -H "Content-Type: application/json" \
   -d '{"telegram_bot_token": "123456789:AAE...xyz"}'
 
 # Health check
-curl http://localhost:3333/health
+curl http://localhost:4999/health
 ```
 
 ## Arquitetura

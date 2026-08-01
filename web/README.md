@@ -15,7 +15,7 @@ Painel de gerenciamento do [Promo Monitor](../README.md). Consome a API REST do 
 ## Pré-requisitos
 
 - Node + [pnpm](https://pnpm.io) (o `pnpm-lock.yaml` é commitado)
-- O backend rodando em `http://localhost:3333`. O painel chama `/api` na **própria origem**: em dev o `server.proxy` do `vite.config.ts` encaminha para a porta 3333, e em produção quem proxia é o nginx da imagem `web`. Mesma origem em ambos os modos — é o que faz o cookie de sessão (`HttpOnly`, `SameSite=Lax`) funcionar sem CORS.
+- O backend rodando em `http://localhost:4999`. O painel chama `/api` na **própria origem**: em dev o `server.proxy` do `vite.config.ts` encaminha para a porta 4999, e em produção quem proxia é o nginx da imagem `web`. Mesma origem em ambos os modos — é o que faz o cookie de sessão (`HttpOnly`, `SameSite=Lax`) funcionar sem CORS.
 - Antes de entrar, o backend precisa ter um usuário: defina `AUTH_SEED_EMAIL`/`AUTH_SEED_PASSWORD` no `server/.env` (não há cadastro aberto).
 
 ## Comandos

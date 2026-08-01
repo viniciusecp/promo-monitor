@@ -71,7 +71,7 @@ break both the semantics and the `overflow-x-auto` wrapper. Shared logic lives i
 
 ## Setup and run
 
-### Backend (porta 3333)
+### Backend (porta 4999)
 ```bash
 cd server
 python3 -m venv .venv && source .venv/bin/activate
@@ -103,7 +103,7 @@ docker compose up --build -d
 ```
 
 **Origem única.** O nginx do container `web` serve a SPA e proxia `/api/*` para
-`backend:3333`; o backend **não publica porta** no host. Consequências: não existe
+`backend:4999`; o backend **não publica porta** no host. Consequências: não existe
 mais `VITE_API_URL` (o front chama `/api` relativo, então trocar de IP/domínio não
 exige rebuild), o cookie de sessão dispensa CORS, e o `pnpm dev` replica isso com
 `server.proxy` no `vite.config.ts` — `changeOrigin` fica **false** ali de propósito,

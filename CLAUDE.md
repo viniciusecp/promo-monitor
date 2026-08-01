@@ -10,7 +10,7 @@ A Telegram promotion monitor. The backend joins Telegram groups via a Telethon u
 
 ## Commands
 
-### Backend (`server/`, runs on port 3333)
+### Backend (`server/`, runs on port 4999)
 ```bash
 cd server
 python3 -m venv .venv && source .venv/bin/activate
@@ -41,7 +41,7 @@ docker compose up --build -d
 # First run: open the panel → log in with AUTH_SEED_* → forced password change →
 # Telegram connect screen → "Enviar código".
 ```
-- **Single origin.** The `web` container's nginx serves the SPA *and* proxies `/api/*` to `backend:3333`; the backend publishes **no host port**. So: `VITE_API_URL` is gone (the client calls the relative `/api`, so changing IP/domain needs no image rebuild), the session cookie needs no CORS, and `pnpm dev` mirrors this with `server.proxy` in `vite.config.ts` — where `changeOrigin` is deliberately **false**, since a rewritten Host breaks the backend's Origin check.
+- **Single origin.** The `web` container's nginx serves the SPA *and* proxies `/api/*` to `backend:4999`; the backend publishes **no host port**. So: `VITE_API_URL` is gone (the client calls the relative `/api`, so changing IP/domain needs no image rebuild), the session cookie needs no CORS, and `pnpm dev` mirrors this with `server.proxy` in `vite.config.ts` — where `changeOrigin` is deliberately **false**, since a rewritten Host breaks the backend's Origin check.
 - nginx must send `proxy_set_header Host $http_host`, **not** `$host`: `$host` drops the port, and the backend would then compare Origin `http://ip:5000` against `http://ip` and reject every write, login included.
 - **Without `AUTH_SEED_EMAIL`/`AUTH_SEED_PASSWORD` on a fresh DB nobody can get in** — there is no open signup and no bootstrap route. The backend logs `auth_no_users`.
 - **The stack still serves plain HTTP by operator decision.** The login password, the Telegram 2FA password and the session cookie all travel in the clear; the gate stops whoever merely knows the URL, not whoever watches the network. With a TLS proxy in front, `AUTH_COOKIE_SECURE=true` is the only app-side change — do not set it before HTTPS exists, or the cookie is never sent and nobody can log in.
@@ -103,7 +103,7 @@ Strict layered architecture — respect these boundaries when adding features:
 ### Frontend
 - **React 19 + Vite + TypeScript**, **TanStack Router** (file-based routing — `routeTree.gen.ts` is auto-generated, do not edit by hand), **TanStack Query** for server state (hooks in `src/hooks/`).
 - **Tailwind CSS v4** via `@tailwindcss/vite`, **shadcn/ui** in `src/components/ui/` (`base-nova` style, **base-ui** primitives under the hood — not Radix). Path alias `@/` → `src/`.
-- API client in `src/lib/api.ts`: base URL is `/api` (same origin — nginx in prod, `server.proxy` in dev), and every request sends `credentials: 'include'` because the session cookie is `HttpOnly` and there is no token in JS to put in a header. Types in `src/types/`. CORS is **off** by default (`settings.cors_origins` empty); it only turns on, with explicit origins and `allow_credentials=True`, if someone points the dev panel straight at port 3333 — the old `allow_origins=["*"]` is incompatible with credentialed requests.
+- API client in `src/lib/api.ts`: base URL is `/api` (same origin — nginx in prod, `server.proxy` in dev), and every request sends `credentials: 'include'` because the session cookie is `HttpOnly` and there is no token in JS to put in a header. Types in `src/types/`. CORS is **off** by default (`settings.cors_origins` empty); it only turns on, with explicit origins and `allow_credentials=True`, if someone points the dev panel straight at port 4999 — the old `allow_origins=["*"]` is incompatible with credentialed requests.
 - Routes: `/login` is the **panel** login (e-mail + password); `/telegram` is the Telegram account connection (owner-only) that used to live at `/login`; `/trocar-senha` is the forced password change. `/` is the matches feed; `/matches` only redirects to it. `MatchTable` (desktop) and `MatchCard` (mobile) are separate components on purpose — shared logic lives in `src/lib/match.ts`, the duplication is layout-only.
 - **No SSE/websockets, and no interval polling on the feed.** Freshness comes from the window-focus refetch: `useMatchesInfinite` sets `refetchOnWindowFocus` *only while page 1 is the only loaded page* (a refetch with N pages loaded re-fetches all of them against a shifted offset window, duplicating/dropping rows), and `/matches/stats` refetches on focus unconditionally. The global `staleTime: 15_000` in `main.tsx` is what keeps a quick alt-tab from firing requests. Past page 1 the only refresh is `LastUpdated`'s manual button — that's why the "atualizado há X" indicator exists. `useMarkRead` patches optimistically and invalidates **only** `['matches','stats']` — invalidating the list would refetch every loaded page and throw away the scroll position.
 - Responsive gotchas worth not re-breaking: the flex container in `__root.tsx` needs `min-w-0` (otherwise `flex-1`'s `min-width:auto` stops the tables' `overflow-x-auto` from ever engaging, and the page scrolls horizontally); a `max-w-*` at a `DialogContent` call-site overrides its mobile clamp via `tailwind-merge`, so pair it (`max-w-[calc(100%-2rem)] sm:max-w-lg`).
