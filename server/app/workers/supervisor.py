@@ -116,7 +116,7 @@ class WorkerSupervisor:
         )
         await self._listener.start()
 
-        self._listener = MessageListener(
+        self._refresh_task = asyncio.create_task(
             self._refresh_loop(), name="refresh_interests"
         )
         self._watchdog_task = asyncio.create_task(
