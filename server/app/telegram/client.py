@@ -9,6 +9,8 @@ from app.core.logging import logger
 _client: TelegramClient | None = None
 _bot_client: TelegramClient | None = None
 
+_receive_updates: bool = True
+
 
 def get_client() -> TelegramClient:
     global _client
@@ -20,8 +22,26 @@ def get_client() -> TelegramClient:
             device_model="PromoBot MVP",
             system_version="1.0",
             app_version="1.0.0",
+            receive_updates=_receive_updates,
         )
     return _client
+
+
+def receives_updates() -> bool:
+    return _receive_updates
+
+
+async def set_receive_updates(enabled: bool) -> bool:
+    global _receive_updates
+    if _receive_updates == enabled:
+        return False
+
+    _receive_updates = enabled
+    await reset_client(delete_session=False)
+    client = get_client()
+    await client.connect()
+    logger.info("telegram_receive_updates_changed", enabled=enabled)
+    return True
 
 
 def get_bot_client() -> TelegramClient:

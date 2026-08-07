@@ -10,7 +10,7 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.logging import logger, setup_logging
 from app.database.base import Base
-from app.database.session import SessionLocal, engine, ensure_columns
+from app.database.session import SessionLocal, engine, ensure_columns, ensure_indexes
 from app.repositories.user_repo import SessionRepository, UserRepository
 from app.services.auth_service import AuthService
 from app.telegram.client import disconnect_clients
@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
     setup_logging()
     Base.metadata.create_all(bind=engine)
     ensure_columns()
+    ensure_indexes()
     _bootstrap_auth()
     logger.info("database_ready")
 

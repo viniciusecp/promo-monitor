@@ -48,10 +48,14 @@ class MessageService:
         self.match_repo = match_repo
         self.alert_service = alert_service
         self.llm_validator = llm_validator
-        self.interests = interests
+        self.interests = [i for i in interests if i.ativo]
 
     def refresh_interests(self, interests: list[ProductInterest]) -> None:
-        self.interests = interests
+        self.interests = [i for i in interests if i.ativo]
+
+    @property
+    def has_active_interests(self) -> bool:
+        return bool(self.interests)
 
     async def process_message(
         self,
@@ -63,6 +67,9 @@ class MessageService:
         text: str | None,
         raw_date: datetime | None,
     ) -> None:
+        if not self.interests:
+            return
+
         if not text:
             return
 
@@ -71,9 +78,6 @@ class MessageService:
 
         candidates: list[MatchCandidate] = []
         for interest in self.interests:
-            if not interest.ativo:
-                continue
-
             score, prices, breakdown, matched_keyword = composite_matcher.match(text, interest)
 
             if score < 0.6:

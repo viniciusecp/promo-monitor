@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.repositories.interest_repo import InterestRepository
 from app.schemas.interest import InterestCreate, InterestResponse, InterestUpdate
 from app.services.interest_service import InterestService
+from app.workers.supervisor import supervisor
 
 router = APIRouter(prefix="/interests", tags=["Interests"])
 
@@ -27,9 +28,12 @@ def list_interests(
 @router.post("", response_model=InterestResponse, status_code=201)
 def create_interest(
     data: InterestCreate,
+    background: BackgroundTasks,
     service: InterestService = Depends(get_service),
 ):
-    return service.create(data)
+    result = service.create(data)
+    background.add_task(supervisor.sync_interests)
+    return result
 
 
 @router.get("/{interest_id}", response_model=InterestResponse)
@@ -44,14 +48,19 @@ def get_interest(
 def update_interest(
     interest_id: int,
     data: InterestUpdate,
+    background: BackgroundTasks,
     service: InterestService = Depends(get_service),
 ):
-    return service.update(interest_id, data)
+    result = service.update(interest_id, data)
+    background.add_task(supervisor.sync_interests)
+    return result
 
 
 @router.delete("/{interest_id}", status_code=204)
 def delete_interest(
     interest_id: int,
+    background: BackgroundTasks,
     service: InterestService = Depends(get_service),
 ):
     service.delete(interest_id)
+    background.add_task(supervisor.sync_interests)

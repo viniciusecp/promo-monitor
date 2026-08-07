@@ -11,9 +11,13 @@ class MessageRepository(BaseRepository[TelegramMessage]):
     def exists_by_telegram_id(self, message_id: int, chat_id: int) -> bool:
         from sqlalchemy import select
 
-        query = select(TelegramMessage).where(
-            TelegramMessage.message_id == message_id,
-            TelegramMessage.chat_id == chat_id,
+        query = (
+            select(TelegramMessage.id)
+            .where(
+                TelegramMessage.chat_id == chat_id,
+                TelegramMessage.message_id == message_id,
+            )
+            .limit(1)
         )
         return self.db.scalar(query) is not None
 

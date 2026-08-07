@@ -14,18 +14,20 @@ import {
 import { useAuthStatus, useTelegramLogout } from '@/hooks/useTelegramAuth'
 import { useHealth } from '@/hooks/useHealth'
 
-function StatusBadge({ ok, children }: { ok: boolean; children: React.ReactNode }) {
-  return (
-    <Badge
-      className={
-        ok
-          ? 'bg-emerald-500/15 text-emerald-400'
-          : 'bg-zinc-700/40 text-zinc-400'
-      }
-    >
-      {children}
-    </Badge>
-  )
+const TONES = {
+  ok: 'bg-emerald-500/15 text-emerald-400',
+  paused: 'bg-amber-500/15 text-amber-400',
+  off: 'bg-zinc-700/40 text-zinc-400',
+} as const
+
+function StatusBadge({
+  tone,
+  children,
+}: {
+  tone: keyof typeof TONES
+  children: React.ReactNode
+}) {
+  return <Badge className={TONES[tone]}>{children}</Badge>
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -48,6 +50,12 @@ export function ConnectionCard() {
     ? `@${auth.user.username}`
     : (auth?.user?.first_name ?? '—')
 
+  const captura: { tone: keyof typeof TONES; label: string } = !health?.worker_running
+    ? { tone: 'off', label: 'parada' }
+    : health.capture_active
+      ? { tone: 'ok', label: 'ativa' }
+      : { tone: 'paused', label: 'pausada (sem interesses ativos)' }
+
   function handleLogout() {
     logout.mutate(undefined, {
       onSuccess: () => {
@@ -67,17 +75,15 @@ export function ConnectionCard() {
           <span className="font-mono">{auth?.phone_masked || '—'}</span>
         </Row>
         <Row label="Conexão">
-          <StatusBadge ok={!!health?.telegram_connected}>
+          <StatusBadge tone={health?.telegram_connected ? 'ok' : 'off'}>
             {health?.telegram_connected ? 'conectado' : 'offline'}
           </StatusBadge>
         </Row>
         <Row label="Captura de mensagens">
-          <StatusBadge ok={!!health?.worker_running}>
-            {health?.worker_running ? 'ativa' : 'parada'}
-          </StatusBadge>
+          <StatusBadge tone={captura.tone}>{captura.label}</StatusBadge>
         </Row>
         <Row label="Bot de alertas">
-          <StatusBadge ok={!!health?.bot_connected}>
+          <StatusBadge tone={health?.bot_connected ? 'ok' : 'off'}>
             {health?.bot_connected ? 'conectado' : 'não configurado'}
           </StatusBadge>
         </Row>

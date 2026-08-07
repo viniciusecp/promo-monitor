@@ -22,11 +22,14 @@ async def healthz():
 @router.get("/health")
 async def health():
     connected = await is_connected()
+    status = supervisor.status()
     return {
         "status": "ok",
         "telegram_connected": connected,
         "telegram_authenticated": authenticator.is_authenticated,
         "worker_running": supervisor.is_running,
+        "capture_active": status["capture_active"],
+        "interests_count": status["interests_count"],
         "bot_connected": bot_manager.status().connected,
         "uptime_seconds": int(time.time() - _start_time),
     }

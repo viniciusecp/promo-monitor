@@ -4,13 +4,20 @@ from telethon import TelegramClient
 from telethon.events import NewMessage
 
 from app.core.logging import logger
+from app.core.timeutils import to_naive_utc
 from app.services.message_service import MessageService
 
 
 class MessageListener:
-    def __init__(self, client: TelegramClient, message_service: MessageService) -> None:
+    def __init__(
+        self,
+        client: TelegramClient,
+        message_service: MessageService,
+        capture_since: datetime | None = None,
+    ) -> None:
         self.client = client
         self.message_service = message_service
+        self.capture_since = capture_since
         self._handler_registered = False
 
     async def start(self) -> None:
@@ -39,7 +46,16 @@ class MessageListener:
             if event.is_private:
                 return
 
+            if not self.message_service.has_active_interests:
+                return
+
             msg = event.message
+
+            if self.capture_since is not None and msg.date is not None:
+                if to_naive_utc(msg.date) < self.capture_since:
+                    logger.debug("message_before_capture_window", message_id=msg.id)
+                    return
+
             chat = await event.get_chat()
             sender = await event.get_sender()
 

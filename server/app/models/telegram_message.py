@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Integer, Text, BigInteger
+from sqlalchemy import JSON, DateTime, Index, Integer, Text, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin
@@ -11,6 +11,10 @@ from app.database.base import Base, TimestampMixin
 
 class TelegramMessage(Base, TimestampMixin):
     __tablename__ = "telegram_messages"
+
+    __table_args__ = (
+        Index("ix_telegram_messages_chat_message", "chat_id", "message_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     message_id: Mapped[int] = mapped_column(Integer, nullable=False)

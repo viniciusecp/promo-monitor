@@ -37,6 +37,19 @@ _COLUMN_MIGRATIONS: dict[str, dict[str, str]] = {
     },
 }
 
+_INDEX_MIGRATIONS: tuple[str, ...] = (
+    "CREATE INDEX IF NOT EXISTS ix_telegram_messages_chat_message"
+    " ON telegram_messages (chat_id, message_id)",
+)
+
+
+def ensure_indexes() -> None:
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        for ddl in _INDEX_MIGRATIONS:
+            conn.execute(text(ddl))
+
 
 def ensure_columns() -> None:
     from sqlalchemy import text

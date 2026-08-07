@@ -16,23 +16,27 @@ from app.services.llm_validator_service import LLMValidator
 from app.services.message_service import MessageService
 from app.telegram.auth import authenticator
 from app.telegram.bot import bot_manager
-from app.telegram.client import get_client
+from app.telegram.client import get_client, set_receive_updates
 from app.telegram.listener import MessageListener
 
 _REFRESH_INTERVAL = 60
 _WATCHDOG_INTERVAL = 30
 _AUTH_CHECK_EVERY = 10
+_PAUSE_GRACE = 30
 
 
 class WorkerSupervisor:
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
+        self._capture_lock = asyncio.Lock()
         self._started = False
+        self._capture_enabled = False
         self._db = None
         self._listener: MessageListener | None = None
         self._message_service: MessageService | None = None
         self._refresh_task: asyncio.Task | None = None
         self._watchdog_task: asyncio.Task | None = None
+        self._pause_task: asyncio.Task | None = None
         self._started_at: datetime | None = None
         self._interests_count = 0
         self._last_error: str | None = None
@@ -41,9 +45,14 @@ class WorkerSupervisor:
     def is_running(self) -> bool:
         return self._started
 
+    @property
+    def is_capturing(self) -> bool:
+        return self._capture_enabled
+
     def status(self) -> dict:
         return {
             "running": self._started,
+            "capture_active": self._capture_enabled,
             "started_at": self._started_at,
             "interests_count": self._interests_count,
             "last_error": self._last_error,
@@ -60,7 +69,7 @@ class WorkerSupervisor:
                 return False
 
             try:
-                await self._build(client)
+                await self._build()
             except Exception as e:
                 self._last_error = str(e)
                 logger.error("worker_start_failed", error=str(e), exc_info=True)
@@ -70,7 +79,11 @@ class WorkerSupervisor:
             self._started = True
             self._started_at = utcnow_naive()
             self._last_error = None
-            logger.info("worker_started", interests_count=self._interests_count)
+            logger.info(
+                "worker_started",
+                interests_count=self._interests_count,
+                capture_active=self._capture_enabled,
+            )
             return True
 
     async def stop(self) -> None:
@@ -82,9 +95,101 @@ class WorkerSupervisor:
             self._started_at = None
             logger.info("worker_stopped")
 
+    async def sync_interests(self) -> None:
+        if not self._started or self._message_service is None:
+            return
+
+        try:
+            db = SessionLocal()
+            try:
+                active = InterestRepository(db).list_active()
+            finally:
+                db.close()
+        except Exception as e:
+            self._last_error = str(e)
+            logger.error("interests_sync_failed", error=str(e), exc_info=True)
+            return
+
+        self._message_service.refresh_interests(active)
+        self._interests_count = len(active)
+
+        if active:
+            self._cancel_pause()
+            await self._set_capture(True, capture_since=utcnow_naive())
+        else:
+            self._schedule_pause()
+
     # ------------------------------------------------------------------ internos
 
-    async def _build(self, client) -> None:
+    def _cancel_pause(self) -> None:
+        if self._pause_task is not None and not self._pause_task.done():
+            self._pause_task.cancel()
+        self._pause_task = None
+
+    def _schedule_pause(self) -> None:
+        if not self._capture_enabled:
+            return
+        if self._pause_task is not None and not self._pause_task.done():
+            return
+        self._pause_task = asyncio.create_task(
+            self._pause_after_grace(), name="capture_pause"
+        )
+
+    async def _pause_after_grace(self) -> None:
+        try:
+            await asyncio.sleep(_PAUSE_GRACE)
+            if self._interests_count == 0:
+                await self._set_capture(False)
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.error("capture_pause_failed", error=str(e), exc_info=True)
+
+    async def _set_capture(
+        self, enabled: bool, capture_since: datetime | None = None
+    ) -> None:
+        async with self._capture_lock:
+            era = self._capture_enabled
+            try:
+                if enabled:
+                    reconectou = await set_receive_updates(True)
+                    if reconectou or self._listener is None:
+                        await self._rebuild_listener(capture_since)
+                else:
+                    if self._listener is not None:
+                        await self._listener.stop()
+                        self._listener = None
+                    await set_receive_updates(False)
+            except Exception as e:
+                self._last_error = str(e)
+                self._capture_enabled = self._listener is not None
+                logger.error(
+                    "capture_transition_failed",
+                    enabled=enabled,
+                    capture_active=self._capture_enabled,
+                    error=str(e),
+                    exc_info=True,
+                )
+                return
+
+            self._capture_enabled = enabled
+            if era != enabled:
+                logger.info(
+                    "capture_resumed" if enabled else "capture_paused",
+                    interests_count=self._interests_count,
+                )
+
+    async def _rebuild_listener(self, capture_since: datetime | None) -> None:
+        if self._listener is not None:
+            await self._listener.stop()
+        self._listener = MessageListener(
+            client=get_client(),
+            message_service=self._message_service,
+            capture_since=capture_since,
+        )
+        await self._listener.start()
+
+    async def _build(self) -> None:
         self._db = SessionLocal()
 
         interest_repo = InterestRepository(self._db)
@@ -110,11 +215,7 @@ class WorkerSupervisor:
             interests=interests,
         )
 
-        self._listener = MessageListener(
-            client=client,
-            message_service=self._message_service,
-        )
-        await self._listener.start()
+        await self._set_capture(bool(interests), capture_since=None)
 
         self._refresh_task = asyncio.create_task(
             self._refresh_loop(), name="refresh_interests"
@@ -124,7 +225,7 @@ class WorkerSupervisor:
         )
 
     async def _teardown(self) -> None:
-        for task in (self._refresh_task, self._watchdog_task):
+        for task in (self._refresh_task, self._watchdog_task, self._pause_task):
             if task is not None and not task.done():
                 task.cancel()
                 try:
@@ -135,12 +236,15 @@ class WorkerSupervisor:
                     logger.warning("worker_task_teardown_error", error=str(e))
         self._refresh_task = None
         self._watchdog_task = None
+        self._pause_task = None
 
         if self._listener is not None:
             await self._listener.stop()
             self._listener = None
 
         self._message_service = None
+        self._capture_enabled = False
+        self._interests_count = 0
 
         if self._db is not None:
             self._db.close()
@@ -150,15 +254,8 @@ class WorkerSupervisor:
         while True:
             await asyncio.sleep(_REFRESH_INTERVAL)
             try:
-                db = SessionLocal()
-                try:
-                    active = InterestRepository(db).list_active()
-                finally:
-                    db.close()
-                if self._message_service is not None:
-                    self._message_service.refresh_interests(active)
-                    self._interests_count = len(active)
-                logger.debug("interests_refreshed", count=len(active))
+                await self.sync_interests()
+                logger.debug("interests_refreshed", count=self._interests_count)
             except asyncio.CancelledError:
                 raise
             except Exception as e:
@@ -170,18 +267,21 @@ class WorkerSupervisor:
             await asyncio.sleep(_WATCHDOG_INTERVAL)
             tick += 1
             try:
-                client = get_client()
+                async with self._capture_lock:
+                    client = get_client()
 
-                if not client.is_connected():
-                    logger.warning("telegram_disconnected_reconnecting")
-                    await client.connect()
+                    if not client.is_connected():
+                        logger.warning("telegram_disconnected_reconnecting")
+                        await client.connect()
 
-                if tick % _AUTH_CHECK_EVERY == 0:
-                    if not await client.is_user_authorized():
-                        logger.warning("telegram_session_revoked")
-                        authenticator.mark_session_revoked()
-                        asyncio.create_task(self.stop(), name="worker_stop_revoked")
-                        return
+                    if tick % _AUTH_CHECK_EVERY == 0:
+                        if not await client.is_user_authorized():
+                            logger.warning("telegram_session_revoked")
+                            authenticator.mark_session_revoked()
+                            asyncio.create_task(
+                                self.stop(), name="worker_stop_revoked"
+                            )
+                            return
             except asyncio.CancelledError:
                 raise
             except Exception as e:
